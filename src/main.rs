@@ -23,8 +23,6 @@ fn relu_derivative(input: Array2<f32>) -> Array2<f32> {
 }
 
 struct Layer {
-    inputs: usize,
-    outputs: usize,
     activation: fn(Array2<f32>) -> Array2<f32>,
     activation_derivative: fn(Array2<f32>) -> Array2<f32>,
     weights: Array2<f32>,
@@ -42,8 +40,6 @@ impl Layer {
         let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.0));
         let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.0));
         Layer {
-            inputs,
-            outputs,
             activation,
             activation_derivative,
             weights,
