@@ -82,17 +82,19 @@ impl Layer {
     }
 
     fn backward(&mut self, target: Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
-        let forward_act = self.forward_activations.as_mut().expect("Backward called before forward");
+        let forward_act = self.forward_activations.as_ref().expect("Backward called before forward");
         println!();
         println!("target:  {}", &target);
         println!("forward: {}", &forward_act);
 
-        let error = target - &*forward_act;
+        let error = target - forward_act;
 
+        println!("weight:  {}", &self.weights);
+        println!("bias:    {}", &self.bias);
         println!("error:   {}", &error);
 
-        let wgrad = &self.weights * &error;
-        let bgrad = &self.weights * &error;
+        let wgrad = error.dot(&self.weights) * (self.activation_derivative)(forward_act.clone());
+        let bgrad = error.dot(&self.bias) * (self.activation_derivative)(forward_act.clone());
 
         println!("wgrad:   {}", &wgrad);
         println!("bgrad:   {}", bgrad);
