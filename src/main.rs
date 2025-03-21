@@ -6,52 +6,59 @@ fn main() {
         Layer::new_from_rand(2, 3, relu, relu_derivative),
         Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
-    let mut x = Array2::from_shape_vec((1, 2), [1., 1.].to_vec()).unwrap();
-    println!("Input: \n{x}");
-    for layer in network.iter_mut() {
-        x = layer.forward(&x);
-    }
-    println!("Result from forward pass: \n{x}");
 
-    println!("\nBeginning backward pass...");
-    let target = Array2::from_shape_vec((1, 1), [0.].to_vec()).unwrap();
-    let mut error = target - &x;
-
-    let mut wgrads: Vec<Array2<f32>> = Vec::new();
-    let mut bgrads: Vec<Array2<f32>> = Vec::new();
-    for layer in network.iter_mut().rev() {
-        let wgrad: Array2<f32>;
-        let bgrad: Array2<f32>;
-        (error, wgrad, bgrad) = layer.backward(&error);
-        wgrads.push(wgrad);
-        bgrads.push(bgrad);
-    }
-    println!("Final gradients: ");
-    println!("weights: {:?}", wgrads);
-    println!("biases:  {:?}", bgrads);
-
-    println!("wgrad shape: {:?}", wgrads.iter().map(|x| x.shape().to_vec()).collect::<Vec<_>>());
-    println!("bgrad shape: {:?}", bgrads.iter().map(|x| x.shape().to_vec()).collect::<Vec<_>>());
+    let inputs = Array2::from_shape_vec((2, 4), vec![
+        0., 0.,
+        1., 0.,
+        0., 1.,
+        1., 1.,
+    ]);
+    let labels = Array2::from_shape_vec((1, 4), vec![
+        0., 
+        1., 
+        1., 
+        0., 
+    ]);
 
     let lr = 0.01;
+    let epochs = 10;
 
-    println!("Applying gradients!");
-    for layer in network.iter_mut() {
+    for i in 0..epochs {
+        for (x, label) in inputs.iter().zip(labels.iter()) {
+            println!("Input: \n{}", x);
+            println!("Label: \n{}", label);
 
-        let w = wgrads.pop().unwrap();
-        let b = bgrads.pop().unwrap();
+            let mut forward_signal = x.clone();
+            for layer in network.iter_mut() {
+                forward_signal = layer.forward(&forward_signal);
+            }
 
-        println!("w sh: {:?}", &w.t().shape());
-        println!("b sh: {:?}", &b.t().shape());
+            println!("Result from forward pass: \n{}", forward_signal);
+            let cost = (label - x).pow2().sum();
+            println!("Cost: {}", cost)
 
-        println!("lwsh: {:?}", layer.weights.shape());
-        println!("lbsh: {:?}", layer.bias.shape());
+            println!("\nBeginning backward pass...");
+            let mut error = label - &forward_signal;
 
-        layer.weights += &(&w.t() * lr);
-        layer.bias += &(&b.t() * lr);
+            let mut wgrads: Vec<Array2<f32>> = Vec::new();
+            let mut bgrads: Vec<Array2<f32>> = Vec::new();
 
-        println!("new w: {:?}", layer.weights);
-        println!("new b: {:?}", layer.bias);
+            for layer in network.iter_mut().rev() {
+                let wgrad: Array2<f32>;
+                let bgrad: Array2<f32>;
+                (error, wgrad, bgrad) = layer.backward(&error);
+                wgrads.push(wgrad);
+                bgrads.push(bgrad);
+            }
+
+            println!("Applying gradients!");
+            for layer in network.iter_mut() {
+                let w = wgrads.pop().unwrap();
+                let b = bgrads.pop().unwrap();
+                layer.weights += &(&w.t() * lr);
+                layer.bias += &(&b.t() * lr);
+            }
+        }
     }
 }
 
@@ -61,10 +68,6 @@ fn relu(input: Array2<f32>) -> Array2<f32> {
 
 fn relu_derivative(input: Array2<f32>) -> Array2<f32> {
     input.mapv_into(|x| if x < 0. { 0. } else { 1. })
-}
-
-fn mse(targets: &Array2<f32>, actual: &Array2<f32>) -> Array2<f32> {
-    (targets - actual).pow2()
 }
 
 struct Layer {
