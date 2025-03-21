@@ -24,8 +24,13 @@ fn main() {
     let lr = 0.005;
     let epochs = 1000;
 
-    for i in 0..epochs {
+    for epc in 0..epochs {
         let mut avg_cost = 0.;
+
+        // Accumulate gradients over all training examples
+        let mut wgrads: Vec<Array2<f32>> = Vec::new();
+        let mut bgrads: Vec<Array2<f32>> = Vec::new();
+
         for (x, label) in inputs.iter().zip(labels.iter()) {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
             let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
@@ -39,15 +44,22 @@ fn main() {
             avg_cost += &error.pow2().sum();
 
             // Back propagation
-            let mut wgrads: Vec<Array2<f32>> = Vec::new();
-            let mut bgrads: Vec<Array2<f32>> = Vec::new();
-
-            for layer in network.iter_mut().rev() {
+            for (i, layer) in network.iter_mut().rev().enumerate() {
                 let wgrad: Array2<f32>;
                 let bgrad: Array2<f32>;
                 (error, wgrad, bgrad) = layer.backward(&error);
-                wgrads.push(wgrad);
-                bgrads.push(bgrad);
+                
+                let new_epoch_wgrad = match wgrads.get(i) {
+                    Some(epoch_grad) => epoch_grad + wgrad,
+                    None => wgrad
+                };
+                wgrads.push(new_epoch_wgrad);
+
+                let new_epoch_bgrad = match bgrads.get(i) {
+                    Some(epoch_grad) => epoch_grad + bgrad,
+                    None => bgrad
+                };
+                bgrads.push(new_epoch_bgrad);
             }
 
             // Gradient application
