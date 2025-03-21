@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use ndarray::{Array2, Axis};
 use rand::Rng;
 
 fn main() {
@@ -9,25 +9,33 @@ fn main() {
     let mut x = Array2::from_shape_vec((1, 2), [1., 1.].to_vec()).unwrap();
     println!("Input: \n{x}");
     for layer in network.iter_mut() {
-        x = layer.forward(x);
+        x = layer.forward(&x);
     }
     println!("Result from forward pass: \n{x}");
 
     println!("\nBeginning backward pass...");
-    let mut target = Array2::from_shape_vec((1, 1), [0.].to_vec()).unwrap();
+    let target = Array2::from_shape_vec((1, 1), [0.].to_vec()).unwrap();
+    let mut error = target - &x;
+    let mut signal = x.clone();
 
     let mut wgrads: Vec<Array2<f32>> = Vec::new();
     let mut bgrads: Vec<Array2<f32>> = Vec::new();
     for layer in network.iter_mut().rev() {
-        let (error, wgrad, bgrad) = layer.backward(target);
-        target = error;
-
+        let wgrad: Array2<f32>;
+        let bgrad: Array2<f32>;
+        (error, signal, wgrad, bgrad) = layer.backward(&error, &signal);
         wgrads.push(wgrad);
         bgrads.push(bgrad);
     }
     println!("Final gradients: ");
     println!("weights: {:?}", wgrads);
     println!("biases:  {:?}", bgrads);
+
+    println!("wgrad shape: {:?}", wgrads.iter().map(|x| x.shape().to_vec()).collect::<Vec<_>>());
+    println!("bgrad shape: {:?}", bgrads.iter().map(|x| x.shape().to_vec()).collect::<Vec<_>>());
+
+    println!("Applying gradients!");
+    // TODO
 }
 
 fn relu(input: Array2<f32>) -> Array2<f32> {
@@ -69,37 +77,44 @@ impl Layer {
         }
     }
 
-    fn forward(&mut self, input: Array2<f32>) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         /*
             println!();
             println!("trans: \n{:?}", input.dot(&self.weights.t()));
             println!("bias:  \n{:?}", &self.bias);
             println!("out:   \n{:?}", input.dot(&self.weights.t()) + &self.bias);
         */
-        let activation = (self.activation)(input.dot(&self.weights.t()) + &self.bias);
-        self.forward_activations = Some(activation.clone());
-        activation
+        self.forward_activations = Some(input.clone());
+        (self.activation)(input.dot(&self.weights.t()) + &self.bias)
     }
 
-    fn backward(&mut self, target: Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
+    fn backward(&mut self, error: &Array2<f32>, signal: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>, Array2<f32>) {
         let forward_act = self.forward_activations.as_ref().expect("Backward called before forward");
+
         println!();
-        println!("target:  {}", &target);
+
         println!("forward: {}", &forward_act);
-
-        let error = target - forward_act;
-
         println!("weight:  {}", &self.weights);
-        println!("bias:    {}", &self.bias);
-        println!("error:   {}", &error);
 
-        let wgrad = error.dot(&self.weights) * (self.activation_derivative)(forward_act.clone());
-        let bgrad = error.dot(&self.bias) * (self.activation_derivative)(forward_act.clone());
+        let delta = error * (self.activation_derivative)(forward_act.clone());
+
+        println!("delta:   {}", &delta);
+
+        let wgrad = delta.t().dot(&signal.to_owned());
+
+        println!("bias:    {}", &self.bias);
+        let bgrad = delta.sum_axis(Axis(0)).insert_axis(Axis(0));
+
+        println!("error:   {}", &error);
+        println!("signal:  {}", &signal);
+        let new_error = self.weights.dot(&delta.t());
+
+        println!("new err: {}", &new_error);
 
         println!("wgrad:   {}", &wgrad);
-        println!("bgrad:   {}", bgrad);
+        println!("bgrad:   {}", &bgrad);
 
-        (error, wgrad, bgrad)
+        (new_error, forward_act.clone(), wgrad, bgrad)
     }
 }
 
