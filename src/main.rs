@@ -1,5 +1,7 @@
-use ndarray::{Array, Array2, Axis};
-use rand::Rng;
+use core::slice;
+
+use ndarray::{Array2, Axis};
+use rand::{seq::SliceRandom, Rng};
 
 fn main() {
     let mut network = [
@@ -8,21 +10,16 @@ fn main() {
         Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
 
-    let inputs = [
-        [0., 0.],
-        [1., 0.],
-        [0., 1.],
-        [1., 1.],
-    ];
-    let labels = [
-        0., 
-        1., 
-        1., 
-        0.,
+    let mut data = [
+        ([0., 0.], 0.),
+        ([1., 0.], 1.),
+        ([0., 1.], 1.),
+        ([1., 1.], 0.),
     ];
 
-    let lr = 0.005;
+    let lr = 0.001;
     let epochs = 1000;
+    let batch_size = 4;
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
@@ -31,7 +28,10 @@ fn main() {
         let mut wgrads: Vec<Array2<f32>> = Vec::new();
         let mut bgrads: Vec<Array2<f32>> = Vec::new();
 
-        for (x, label) in inputs.iter().zip(labels.iter()) {
+        // Sample a random number of items from our training data to avoid converging to a local minimum
+        data.shuffle(&mut rand::rng());
+        let batch_iter = data.iter().skip(data.len() - batch_size);
+        for (x, label) in batch_iter {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
             let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
 
@@ -39,6 +39,8 @@ fn main() {
             for layer in network.iter_mut() {
                 forward_signal = layer.forward(&forward_signal);
             }
+
+            println!("output: {}, actual {}", forward_signal, label);
 
             let mut error = &label - forward_signal;
             avg_cost += &error.pow2().sum();
@@ -70,7 +72,7 @@ fn main() {
                 layer.bias += &(&b.t() * lr);
             }
         }
-        println!("Epoch avg cost: {}", avg_cost / labels.len() as f32)
+        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / batch_size as f32)
     }
 }
 
