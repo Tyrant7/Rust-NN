@@ -6,12 +6,12 @@ fn main() {
         Layer::new_from_rand(2, 3, relu, relu_derivative),
         Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
-    let mut x = Array2::from_shape_vec((2, 1), [1., 1.].to_vec()).unwrap();
-    println!("Input: {x}");
+    let mut x = Array2::from_shape_vec((1, 2), [1., 1.].to_vec()).unwrap();
+    println!("Input: \n{x}");
     for layer in network {
         x = layer.forward(x);
     }
-    println!("Result from forward pass: {x}")
+    println!("Result from forward pass: \n{x}")
 }
 
 fn relu(input: Array2<f32>) -> Array2<f32> {
@@ -39,7 +39,7 @@ impl Layer {
         activation_derivative: fn(Array2<f32>) -> Array2<f32>
     ) -> Layer {
         let mut rng = rand::rng();
-        let weights = Array2::from_shape_fn((inputs, outputs), |(_i, _j)| rng.random_range(-1.0..1.0));
+        let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.0));
         let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.0));
         Layer {
             inputs,
@@ -52,13 +52,19 @@ impl Layer {
     }
 
     fn forward(&self, input: Array2<f32>) -> Array2<f32> {
-        (self.activation)(input * self.weights.t() + &self.bias)
+        /*
+            println!();
+            println!("trans: \n{:?}", input.dot(&self.weights.t()));
+            println!("bias:  \n{:?}", &self.bias);
+            println!("out:   \n{:?}", input.dot(&self.weights.t()) + &self.bias);
+        */
+        (self.activation)(input.dot(&self.weights.t()) + &self.bias)
     }
 
     /*
     fn backward(&self, input: Array2<f32>) -> Array2<f32> {
 
     }
-     */
+    */
 }
 
