@@ -3,15 +3,15 @@ use rand::Rng;
 
 fn main() {
     let network = [
-        Layer::new_from_rand(2, 2, relu, relu_derivative),
-        Layer::new_from_rand(2, 1, relu, relu_derivative),
+        Layer::new_from_rand(2, 3, relu, relu_derivative),
+        Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
     let mut x = Array2::from_shape_vec((2, 1), [1., 1.].to_vec()).unwrap();
-    print!("Input: {x}")
+    println!("Input: {x}");
     for layer in network {
-        x = layer.forward(x)
+        x = layer.forward(x);
     }
-    print!("Result from forward pass: {x}")
+    println!("Result from forward pass: {x}")
 }
 
 fn relu(input: Array2<f32>) -> Array2<f32> {
@@ -55,8 +55,10 @@ impl Layer {
         (self.activation)(input * self.weights.t() + &self.bias)
     }
 
+    /*
     fn backward(&self, input: Array2<f32>) -> Array2<f32> {
 
     }
+     */
 }
 
