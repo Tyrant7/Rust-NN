@@ -3,8 +3,9 @@ use rand::Rng;
 
 fn main() {
     let mut network = [
-        Layer::new_from_rand(2, 3, relu, relu_derivative),
-        Layer::new_from_rand(3, 1, relu, relu_derivative),
+        Layer::new_from_rand(2, 5, relu, relu_derivative),
+        Layer::new_from_rand(5, 3, relu, relu_derivative),
+        Layer::new_from_rand(3, 2, relu, relu_derivative),
     ];
 
     let inputs = [
@@ -14,35 +15,30 @@ fn main() {
         [1., 1.],
     ];
     let labels = [
-        0., 
-        1., 
-        1., 
-        0.,
+        0, 
+        1, 
+        1, 
+        0,
     ];
 
-    let lr = 0.01;
-    let epochs = 10;
+    let lr = 0.005;
+    let epochs = 1000;
 
     for i in 0..epochs {
+        let mut avg_cost = 0.;
         for (x, label) in inputs.iter().zip(labels.iter()) {
-            println!("Input: \n{:?}", x);
-            println!("Label: \n{:?}", label);
-
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_elem((1, 1), *label);
+            let label = Array2::from_shape_fn((1, 2), |(_i, j)| if j == *label { 1. } else { 0. });
 
             let mut forward_signal = x;
             for layer in network.iter_mut() {
                 forward_signal = layer.forward(&forward_signal);
             }
 
-            println!("Result from forward pass: \n{}", forward_signal);
             let mut error = label - forward_signal;
-            let cost = &error.pow2().sum();
-            println!("Cost: {}", cost);
+            avg_cost += &error.pow2().sum();
 
-            println!("\nBeginning backward pass...");
-
+            // Back propagation
             let mut wgrads: Vec<Array2<f32>> = Vec::new();
             let mut bgrads: Vec<Array2<f32>> = Vec::new();
 
@@ -54,7 +50,7 @@ fn main() {
                 bgrads.push(bgrad);
             }
 
-            println!("Applying gradients!");
+            // Gradient application
             for layer in network.iter_mut() {
                 let w = wgrads.pop().unwrap();
                 let b = bgrads.pop().unwrap();
@@ -62,6 +58,7 @@ fn main() {
                 layer.bias += &(&b.t() * lr);
             }
         }
+        println!("Epoch avg cost: {}", avg_cost / labels.len() as f32)
     }
 }
 
@@ -90,8 +87,8 @@ impl Layer {
         activation_derivative: fn(Array2<f32>) -> Array2<f32>
     ) -> Layer {
         let mut rng = rand::rng();
-        let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range((0.)..1.));
-        let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range((0.)..1.));
+        let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.));
+        let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.));
         Layer {
             activation,
             activation_derivative,
