@@ -5,7 +5,7 @@ fn main() {
     let mut network = [
         Layer::new_from_rand(2, 5, relu, relu_derivative),
         Layer::new_from_rand(5, 3, relu, relu_derivative),
-        Layer::new_from_rand(3, 2, relu, relu_derivative),
+        Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
 
     let inputs = [
@@ -15,10 +15,10 @@ fn main() {
         [1., 1.],
     ];
     let labels = [
-        0, 
-        1, 
-        1, 
-        0,
+        0., 
+        1., 
+        1., 
+        0.,
     ];
 
     let lr = 0.005;
@@ -28,14 +28,14 @@ fn main() {
         let mut avg_cost = 0.;
         for (x, label) in inputs.iter().zip(labels.iter()) {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 2), |(_i, j)| if j == *label { 1. } else { 0. });
+            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
 
             let mut forward_signal = x;
             for layer in network.iter_mut() {
                 forward_signal = layer.forward(&forward_signal);
             }
 
-            let mut error = label - forward_signal;
+            let mut error = &label - forward_signal;
             avg_cost += &error.pow2().sum();
 
             // Back propagation
