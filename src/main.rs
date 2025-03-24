@@ -3,8 +3,8 @@ use rand::Rng;
 
 fn main() {
     let mut network = [
-        Layer::new_from_rand(2, 3, relu, relu_derivative),
-        Layer::new_from_rand(3, 1, relu, relu_derivative),
+        Layer::new_from_rand(2, 2, relu, relu_derivative),
+        Layer::new_from_rand(2, 1, sigmoid, sigmoid_derivative),
     ];
 
     let data = [
@@ -14,7 +14,7 @@ fn main() {
         ([1., 1.], 0.),
     ];
 
-    let lr = 0.001;
+    let lr = 0.01;
     let epochs = 1000;
 
     for epc in 0..epochs {
@@ -29,10 +29,9 @@ fn main() {
         }
 
         // Sample a random number of items from our training data to avoid converging to a local minimum
-        // data.shuffle(&mut rand::rng());
         for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
+            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| *label);
 
             let mut forward_signal = x;
             for layer in network.iter_mut() {
@@ -41,11 +40,13 @@ fn main() {
 
             println!("output: {}, actual {}", forward_signal, label);
 
-            let cost = &label - forward_signal;
-            avg_cost += &cost.pow2().sum();
+            let cost = binary_cross_entroy_loss(&forward_signal, &label);
+            avg_cost += cost;
 
             // Cost derivative
-            let mut error = cost * 2.;
+            let mut error = binary_cross_entroy_loss_derivative(&forward_signal, &label);
+
+            println!("errors: {}", error);
 
             // Back propagation
             for (i, layer) in network.iter_mut().rev().enumerate() {
@@ -66,15 +67,26 @@ fn main() {
         for layer in network.iter_mut() {
             let w = wgrads.pop().unwrap() / data.len() as f32;
             let b = bgrads.pop().unwrap() / data.len() as f32;
-            layer.weights += &(&w * lr);
-            layer.bias += &(&b * lr);
+            layer.weights -= &(&w * lr);
+            layer.bias -= &(&b * lr);
 
-            println!("Layer weights: \n{:?}", layer.weights);
-            println!("Layer biases : \n{:?}", layer.bias);
+            // println!("Layer weights: \n{:?}", layer.weights);
+            // println!("Layer biases : \n{:?}", layer.bias);
         }
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
+}
+
+fn binary_cross_entroy_loss(pred: &Array2<f32>, label: &Array2<f32>) -> f32 {
+    // To prevent log(0)
+    let epsilon = 1e-12;
+    -(label * (pred + epsilon).ln() + (1. - label) * (1. - pred + epsilon).ln()).sum()
+}
+
+fn binary_cross_entroy_loss_derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32> {
+    let epsilon = 1e-12;
+    (pred - label) / ((pred * (1. - pred)) + epsilon)
 }
 
 fn relu(input: Array2<f32>) -> Array2<f32> {
@@ -83,6 +95,15 @@ fn relu(input: Array2<f32>) -> Array2<f32> {
 
 fn relu_derivative(input: Array2<f32>) -> Array2<f32> {
     input.mapv_into(|x| if x < 0. { 0. } else { 1. })
+}
+
+fn sigmoid(input: Array2<f32>) -> Array2<f32> {
+    input.mapv_into(|x| 1. / (1. + (-x).exp()))
+}
+
+fn sigmoid_derivative(input: Array2<f32>) -> Array2<f32> {
+    let sig = sigmoid(input);
+    &sig * (1. - &sig)
 }
 
 struct Layer {
