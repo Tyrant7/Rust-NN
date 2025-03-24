@@ -28,7 +28,7 @@ fn main() {
     for epc in 0..epochs {
         let mut avg_cost = 0.;
 
-        // Sample a random number of items from our training data to avoid converging to a local minimum
+        // Iterate over our entire dataset to collect gradients before applying them
         for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
             let label = Array2::from_shape_fn((1, 1), |(_i, _j)| *label);
