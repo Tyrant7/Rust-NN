@@ -5,16 +5,15 @@ use rand::{seq::SliceRandom, Rng};
 
 fn main() {
     let mut network = [
-        Layer::new_from_rand(2, 5, relu, relu_derivative),
-        Layer::new_from_rand(5, 3, relu, relu_derivative),
-        Layer::new_from_rand(3, 1, relu, relu_derivative),
+        Layer::new_from_rand(2, 3, relu, relu_derivative),
+        Layer::new_from_rand(3, 2, relu, relu_derivative),
     ];
 
-    let mut data = [
-        ([0., 0.], 0.),
-        ([1., 0.], 1.),
-        ([0., 1.], 1.),
-        ([1., 1.], 0.),
+    let data = [
+        ([0., 0.], 0),
+        ([1., 0.], 1),
+        ([0., 1.], 1),
+        ([1., 1.], 0),
     ];
 
     let lr = 0.001;
@@ -27,13 +26,17 @@ fn main() {
         // Accumulate gradients over all training examples
         let mut wgrads: Vec<Array2<f32>> = Vec::new();
         let mut bgrads: Vec<Array2<f32>> = Vec::new();
+        for layer in network.iter().rev() {
+            wgrads.push(Array2::zeros(layer.weights.raw_dim()));
+            bgrads.push(Array2::zeros(layer.bias.raw_dim()));
+        }
 
         // Sample a random number of items from our training data to avoid converging to a local minimum
-        data.shuffle(&mut rand::rng());
+        // data.shuffle(&mut rand::rng());
         let batch_iter = data.iter().skip(data.len() - batch_size);
         for (x, label) in batch_iter {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
+            let label = Array2::from_shape_fn((1, 2), |(_i, j)| if j == *label { 1. } else { 0. });
 
             let mut forward_signal = x;
             for layer in network.iter_mut() {
@@ -51,27 +54,26 @@ fn main() {
                 let bgrad: Array2<f32>;
                 (error, wgrad, bgrad) = layer.backward(&error);
                 
-                let new_epoch_wgrad = match wgrads.get(i) {
-                    Some(epoch_grad) => epoch_grad + wgrad,
-                    None => wgrad
-                };
-                wgrads.push(new_epoch_wgrad);
-
-                let new_epoch_bgrad = match bgrads.get(i) {
-                    Some(epoch_grad) => epoch_grad + bgrad,
-                    None => bgrad
-                };
-                bgrads.push(new_epoch_bgrad);
-            }
-
-            // Gradient application
-            for layer in network.iter_mut() {
-                let w = wgrads.pop().unwrap();
-                let b = bgrads.pop().unwrap();
-                layer.weights += &(&w.t() * lr);
-                layer.bias += &(&b.t() * lr);
+                if let Some(epoch_wgrad) = wgrads.get_mut(i) {
+                    *epoch_wgrad += &wgrad.t();
+                }
+                if let Some(epoch_bgrad) = bgrads.get_mut(i) {
+                    *epoch_bgrad += &bgrad.t();
+                }
             }
         }
+        
+        // Gradient application
+        for layer in network.iter_mut() {
+            let w = wgrads.pop().unwrap();
+            let b = bgrads.pop().unwrap();
+            layer.weights += &(&w * lr);
+            layer.bias += &(&b * lr);
+
+            println!("Layer weights: \n{:?}", layer.weights);
+            println!("Layer biases : \n{:?}", layer.bias);
+        }
+
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / batch_size as f32)
     }
 }
