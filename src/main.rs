@@ -20,14 +20,6 @@ fn main() {
     for epc in 0..epochs {
         let mut avg_cost = 0.;
 
-        // Accumulate gradients over all training examples
-        let mut wgrads: Vec<Array2<f32>> = Vec::new();
-        let mut bgrads: Vec<Array2<f32>> = Vec::new();
-        for layer in network.iter().rev() {
-            wgrads.push(Array2::zeros(layer.weights.raw_dim()));
-            bgrads.push(Array2::zeros(layer.bias.raw_dim()));
-        }
-
         // Sample a random number of items from our training data to avoid converging to a local minimum
         for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
@@ -47,26 +39,15 @@ fn main() {
             let mut error = binary_cross_entroy_loss_derivative(&forward_signal, &label);
 
             // Back propagation
-            for (i, layer) in network.iter_mut().rev().enumerate() {
-                let wgrad: Array2<f32>;
-                let bgrad: Array2<f32>;
-                (error, wgrad, bgrad) = layer.backward(&error);
-                
-                if let Some(epoch_wgrad) = wgrads.get_mut(i) {
-                    *epoch_wgrad += &wgrad.t();
-                }
-                if let Some(epoch_bgrad) = bgrads.get_mut(i) {
-                    *epoch_bgrad += &bgrad.t();
-                }
+            for layer in network.iter_mut().rev() {
+                error = layer.backward(&error);
             }
         }
 
         // Gradient application
         for layer in network.iter_mut() {
-            let w = wgrads.pop().unwrap() / data.len() as f32;
-            let b = bgrads.pop().unwrap() / data.len() as f32;
-            layer.weights -= &(&w * lr);
-            layer.bias -= &(&b * lr);
+            layer.apply_gradients(lr, data.len());
+            layer.zero_gradients();
         }
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
@@ -103,7 +84,9 @@ fn sigmoid_derivative(input: Array2<f32>) -> Array2<f32> {
 
 pub trait Layer {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32>;
-    fn backward(&mut self, error: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>);
+    fn backward(&mut self, error: &Array2<f32>) -> Array2<f32>;
+    fn apply_gradients(&mut self, lr: f32, batch_size: usize);
+    fn zero_gradients(&mut self);
 }
 
 struct Linear {
@@ -113,6 +96,8 @@ struct Linear {
     bias: Array2<f32>,
     forward_input: Option<Array2<f32>>,
     forward_z: Option<Array2<f32>>,
+    wgrads: Array2<f32>,
+    bgrads: Array2<f32>,
 }
 
 impl Linear {
@@ -125,6 +110,8 @@ impl Linear {
         let mut rng = rand::rng();
         let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.));
         let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.));
+        let wgrads = Array2::zeros(weights.raw_dim());
+        let bgrads = Array2::zeros(bias.raw_dim());
         Linear {
             activation,
             activation_derivative,
@@ -132,6 +119,8 @@ impl Linear {
             bias,
             forward_input: None,
             forward_z: None,
+            wgrads,
+            bgrads,
         }
     }
 }
@@ -144,18 +133,29 @@ impl Layer for Linear {
         (self.activation)(z)
     }
 
-    fn backward(&mut self, error: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
+    fn backward(&mut self, error: &Array2<f32>) -> Array2<f32> {
         let forward_z = self.forward_z.as_ref().expect("Backward called before forward");
         let forward_input = self.forward_input.as_ref().expect("Backward called before forward");
 
         let delta = error * (self.activation_derivative)(forward_z.clone());
 
-        let wgrad = forward_input.t().dot(&delta);
-        let bgrad = delta.sum_axis(Axis(0)).insert_axis(Axis(1));
+        // Accumulate gradients
+        self.wgrads += &forward_input.t().dot(&delta).t();
+        self.bgrads += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
-        let new_error = delta.dot(&self.weights);
+        delta.dot(&self.weights)
+    }
 
-        (new_error, wgrad, bgrad)
+    fn apply_gradients(&mut self, lr: f32, batch_size: usize) {
+        let wgrads = &self.wgrads / batch_size as f32;
+        let bgrads = &self.bgrads / batch_size as f32;
+        self.weights -= &(wgrads * lr);
+        self.bias -= &(bgrads * lr);
+    }
+
+    fn zero_gradients(&mut self) {
+        self.wgrads = Array2::zeros(self.weights.raw_dim());
+        self.bgrads = Array2::zeros(self.bias.raw_dim());
     }
 }
 
