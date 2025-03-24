@@ -2,11 +2,17 @@ use ndarray::Array2;
 
 mod layers;
 use layers::Layer;
+use layers::Linear;
+
+use layers::ReLU;
+use layers::Sigmoid;
 
 fn main() {
-    let mut network = [
-        layers::Linear::new_from_rand(2, 16, relu, relu_derivative),
-        layers::Linear::new_from_rand(16, 1, sigmoid, sigmoid_derivative),
+    let mut network: Vec<Box<dyn Layer>> = vec![
+        Box::new(Linear::new_from_rand(2, 16)),
+        Box::new(ReLU::new()),
+        Box::new(Linear::new_from_rand(16, 1)),
+        Box::new(Sigmoid::new()),
     ];
 
     let data = [
