@@ -1,7 +1,5 @@
-use core::slice;
-
 use ndarray::{Array2, Axis};
-use rand::{seq::SliceRandom, Rng};
+use rand::Rng;
 
 fn main() {
     let mut network = [
@@ -18,7 +16,6 @@ fn main() {
 
     let lr = 0.001;
     let epochs = 1000;
-    let batch_size = 4;
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
@@ -33,8 +30,7 @@ fn main() {
 
         // Sample a random number of items from our training data to avoid converging to a local minimum
         // data.shuffle(&mut rand::rng());
-        let batch_iter = data.iter().skip(data.len() - batch_size);
-        for (x, label) in batch_iter {
+        for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
             let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
 
@@ -68,8 +64,8 @@ fn main() {
 
         // Gradient application
         for layer in network.iter_mut() {
-            let w = wgrads.pop().unwrap();
-            let b = bgrads.pop().unwrap();
+            let w = wgrads.pop().unwrap() / data.len() as f32;
+            let b = bgrads.pop().unwrap() / data.len() as f32;
             layer.weights += &(&w * lr);
             layer.bias += &(&b * lr);
 
@@ -77,7 +73,7 @@ fn main() {
             println!("Layer biases : \n{:?}", layer.bias);
         }
 
-        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / batch_size as f32)
+        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
 }
 
