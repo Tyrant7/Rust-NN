@@ -6,14 +6,14 @@ use rand::{seq::SliceRandom, Rng};
 fn main() {
     let mut network = [
         Layer::new_from_rand(2, 3, relu, relu_derivative),
-        Layer::new_from_rand(3, 2, relu, relu_derivative),
+        Layer::new_from_rand(3, 1, relu, relu_derivative),
     ];
 
     let data = [
-        ([0., 0.], 0),
-        ([1., 0.], 1),
-        ([0., 1.], 1),
-        ([1., 1.], 0),
+        ([0., 0.], 0.),
+        ([1., 0.], 1.),
+        ([0., 1.], 1.),
+        ([1., 1.], 0.),
     ];
 
     let lr = 0.001;
@@ -36,7 +36,7 @@ fn main() {
         let batch_iter = data.iter().skip(data.len() - batch_size);
         for (x, label) in batch_iter {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 2), |(_i, j)| if j == *label { 1. } else { 0. });
+            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| label);
 
             let mut forward_signal = x;
             for layer in network.iter_mut() {
@@ -62,7 +62,7 @@ fn main() {
                 }
             }
         }
-        
+
         // Gradient application
         for layer in network.iter_mut() {
             let w = wgrads.pop().unwrap();
