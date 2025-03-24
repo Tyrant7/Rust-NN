@@ -3,8 +3,8 @@ use rand::Rng;
 
 fn main() {
     let mut network = [
-        Layer::new_from_rand(2, 2, relu, relu_derivative),
-        Layer::new_from_rand(2, 1, sigmoid, sigmoid_derivative),
+        Linear::new_from_rand(2, 16, relu, relu_derivative),
+        Linear::new_from_rand(16, 1, sigmoid, sigmoid_derivative),
     ];
 
     let data = [
@@ -15,7 +15,7 @@ fn main() {
     ];
 
     let lr = 0.01;
-    let epochs = 1000;
+    let epochs = 100000;
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
@@ -46,8 +46,6 @@ fn main() {
             // Cost derivative
             let mut error = binary_cross_entroy_loss_derivative(&forward_signal, &label);
 
-            println!("errors: {}", error);
-
             // Back propagation
             for (i, layer) in network.iter_mut().rev().enumerate() {
                 let wgrad: Array2<f32>;
@@ -69,9 +67,6 @@ fn main() {
             let b = bgrads.pop().unwrap() / data.len() as f32;
             layer.weights -= &(&w * lr);
             layer.bias -= &(&b * lr);
-
-            // println!("Layer weights: \n{:?}", layer.weights);
-            // println!("Layer biases : \n{:?}", layer.bias);
         }
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
@@ -94,7 +89,7 @@ fn relu(input: Array2<f32>) -> Array2<f32> {
 }
 
 fn relu_derivative(input: Array2<f32>) -> Array2<f32> {
-    input.mapv_into(|x| if x < 0. { 0. } else { 1. })
+    input.mapv_into(|x| if x <= 0. { 0. } else { 1. })
 }
 
 fn sigmoid(input: Array2<f32>) -> Array2<f32> {
@@ -106,47 +101,54 @@ fn sigmoid_derivative(input: Array2<f32>) -> Array2<f32> {
     &sig * (1. - &sig)
 }
 
-struct Layer {
+pub trait Layer {
+    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32>;
+    fn backward(&mut self, error: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>);
+}
+
+struct Linear {
     activation: fn(Array2<f32>) -> Array2<f32>,
     activation_derivative: fn(Array2<f32>) -> Array2<f32>,
     weights: Array2<f32>,
     bias: Array2<f32>,
     forward_input: Option<Array2<f32>>,
-    forward_activations: Option<Array2<f32>>,
+    forward_z: Option<Array2<f32>>,
 }
 
-impl Layer {
+impl Linear {
     fn new_from_rand(
         inputs: usize, 
         outputs: usize, 
         activation: fn(Array2<f32>) -> Array2<f32>, 
         activation_derivative: fn(Array2<f32>) -> Array2<f32>
-    ) -> Layer {
+    ) -> Linear {
         let mut rng = rand::rng();
         let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.));
         let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.));
-        Layer {
+        Linear {
             activation,
             activation_derivative,
             weights,
             bias,
             forward_input: None,
-            forward_activations: None,
+            forward_z: None,
         }
     }
+}
 
+impl Layer for Linear {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         self.forward_input = Some(input.clone());
-        let activation = (self.activation)(input.dot(&self.weights.t()) + &self.bias);
-        self.forward_activations = Some(activation.clone());
-        activation
+        let z = input.dot(&self.weights.t()) + &self.bias;
+        self.forward_z = Some(z.clone());
+        (self.activation)(z)
     }
 
     fn backward(&mut self, error: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
-        let forward_act = self.forward_activations.as_ref().expect("Backward called before forward");
+        let forward_z = self.forward_z.as_ref().expect("Backward called before forward");
         let forward_input = self.forward_input.as_ref().expect("Backward called before forward");
 
-        let delta = error * (self.activation_derivative)(forward_act.clone());
+        let delta = error * (self.activation_derivative)(forward_z.clone());
 
         let wgrad = forward_input.t().dot(&delta);
         let bgrad = delta.sum_axis(Axis(0)).insert_axis(Axis(1));
