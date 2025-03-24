@@ -45,8 +45,11 @@ fn main() {
 
             println!("output: {}, actual {}", forward_signal, label);
 
-            let mut error = &label - forward_signal;
-            avg_cost += &error.pow2().sum();
+            let cost = &label - forward_signal;
+            avg_cost += &cost.pow2().sum();
+
+            // Cost derivative
+            let mut error = cost * 2.;
 
             // Back propagation
             for (i, layer) in network.iter_mut().rev().enumerate() {
