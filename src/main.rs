@@ -67,20 +67,3 @@ fn binary_cross_entroy_loss_derivative(pred: &Array2<f32>, label: &Array2<f32>) 
     (pred - label) / ((pred * (1. - pred)) + epsilon)
 }
 
-fn relu(input: Array2<f32>) -> Array2<f32> {
-    input.mapv_into(|x| x.max(0.))
-}
-
-fn relu_derivative(input: Array2<f32>) -> Array2<f32> {
-    input.mapv_into(|x| if x <= 0. { 0. } else { 1. })
-}
-
-fn sigmoid(input: Array2<f32>) -> Array2<f32> {
-    input.mapv_into(|x| 1. / (1. + (-x).exp()))
-}
-
-fn sigmoid_derivative(input: Array2<f32>) -> Array2<f32> {
-    let sig = sigmoid(input);
-    &sig * (1. - &sig)
-}
-
