@@ -1,6 +1,7 @@
 use crate::Model;
 use super::Optimizer;
 
+#[allow(clippy::upper_case_acronyms)]
 pub struct SGD {
     lr: f32,
 }
