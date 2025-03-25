@@ -36,7 +36,7 @@ fn main() {
         ([1., 1.], 0.),
     ];
 
-    let optimizer = SGD::new(0.01);
+    let mut optimizer = SGD::new(&network.collect_parameters(), 0.01, 0.9);
     let epochs = 100000;
 
     for epc in 0..epochs {
