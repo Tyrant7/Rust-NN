@@ -46,6 +46,7 @@ impl Layer for Linear {
         self.wgrads += &forward_input.t().dot(delta).t();
         self.bgrads += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
+        // Propagate the signal backward to the previous layer
         delta.dot(&self.weights)
     }
 

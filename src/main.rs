@@ -1,19 +1,21 @@
 use ndarray::Array2;
 
+mod model;
+use model::Model;
+
 mod layers;
-use layers::Layer;
 use layers::Linear;
 
 use layers::ReLU;
 use layers::Sigmoid;
 
 fn main() {
-    let mut network: Vec<Box<dyn Layer>> = vec![
+    let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
         Box::new(ReLU::new()),
         Box::new(Linear::new_from_rand(16, 1)),
         Box::new(Sigmoid::new()),
-    ];
+    ]);
 
     let data = [
         ([0., 0.], 0.),
@@ -33,18 +35,15 @@ fn main() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
             let label = Array2::from_shape_fn((1, 1), |(_i, _j)| *label);
 
-            let mut forward_signal = x;
-            for layer in network.iter_mut() {
-                forward_signal = layer.forward(&forward_signal);
-            }
+            let pred = network.forward(x);
 
-            println!("output: {}, actual {}", forward_signal, label);
+            println!("output: {}, actual {}", pred, label);
 
-            let cost = binary_cross_entroy_loss(&forward_signal, &label);
+            let cost = binary_cross_entroy_loss(&pred, &label);
             avg_cost += cost;
 
             // Cost derivative
-            let mut error = binary_cross_entroy_loss_derivative(&forward_signal, &label);
+            let mut error = binary_cross_entroy_loss_derivative(&pred, &label);
 
             // Back propagation
             for layer in network.iter_mut().rev() {
