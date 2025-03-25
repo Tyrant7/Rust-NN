@@ -1,7 +1,7 @@
-use crate::Model;
+use crate::model::Model;
 
 pub trait Optimizer {
-    fn step(&self, network: &mut Model);
+    fn step(&mut self, network: &mut Model);
 }
 
 pub mod stochastic_gradient_descent;

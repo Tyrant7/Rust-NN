@@ -7,6 +7,12 @@ pub trait Layer {
     // Not all layers have learnable parameters
     fn apply_gradients(&mut self, _step_size: f32) {}
     fn zero_gradients(&mut self) {}
+    fn get_learnable_parameters(&mut self) -> Vec<Parameter> { Vec::new() }
+}
+
+pub struct Parameter<'a> {
+    pub value: &'a mut f32,
+    pub gradient: &'a mut f32,
 }
 
 pub mod linear;
