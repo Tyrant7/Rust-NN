@@ -1,17 +1,25 @@
-use loss_functions::LossFunction;
 use ndarray::Array2;
 
+//
 mod model;
 use model::Model;
 
+//
 mod layers;
 use layers::Linear;
 
 use layers::ReLU;
 use layers::Sigmoid;
 
+//
 mod loss_functions;
+use loss_functions::LossFunction;
 use loss_functions::BCELoss;
+
+//
+mod optimizers;
+use optimizers::Optimizer;
+use optimizers::SGD;
 
 fn main() {
     let mut network = Model::new(vec![
@@ -28,7 +36,7 @@ fn main() {
         ([1., 1.], 0.),
     ];
 
-    let lr = 0.01;
+    let optimizer = SGD::new(0.01);
     let epochs = 100000;
 
     for epc in 0..epochs {
@@ -49,7 +57,7 @@ fn main() {
         }
 
         // Gradient application
-        network.apply_gradients(lr, data.len());
+        optimizer.step(&mut network);
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }

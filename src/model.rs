@@ -26,9 +26,9 @@ impl Model {
         }
     }
 
-    pub fn apply_gradients(&mut self, lr: f32, batch_size: usize) {
+    pub fn apply_gradients(&mut self, step_size: f32) {
         for layer in self.layers.iter_mut() {
-            layer.apply_gradients(lr, batch_size);
+            layer.apply_gradients(step_size);
             layer.zero_gradients();
         }
     }

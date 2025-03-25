@@ -5,7 +5,7 @@ pub trait Layer {
     fn backward(&mut self, error: &Array2<f32>) -> Array2<f32>;
 
     // Not all layers have learnable parameters
-    fn apply_gradients(&mut self, _lr: f32, _batch_size: usize) {}
+    fn apply_gradients(&mut self, _step_size: f32) {}
     fn zero_gradients(&mut self) {}
 }
 
