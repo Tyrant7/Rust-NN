@@ -9,6 +9,8 @@ use layers::Linear;
 use layers::ReLU;
 use layers::Sigmoid;
 
+mod loss_functions;
+
 fn main() {
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
@@ -43,32 +45,15 @@ fn main() {
             avg_cost += cost;
 
             // Cost derivative
-            let mut error = binary_cross_entroy_loss_derivative(&pred, &label);
+            let error = binary_cross_entroy_loss_derivative(&pred, &label);
 
             // Back propagation
-            for layer in network.iter_mut().rev() {
-                error = layer.backward(&error);
-            }
+            network.backward(error);
         }
 
         // Gradient application
-        for layer in network.iter_mut() {
-            layer.apply_gradients(lr, data.len());
-            layer.zero_gradients();
-        }
+        network.apply_gradients(lr, data.len());
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
 }
-
-fn binary_cross_entroy_loss(pred: &Array2<f32>, label: &Array2<f32>) -> f32 {
-    // To prevent log(0)
-    let epsilon = 1e-12;
-    -(label * (pred + epsilon).ln() + (1. - label) * (1. - pred + epsilon).ln()).sum()
-}
-
-fn binary_cross_entroy_loss_derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32> {
-    let epsilon = 1e-12;
-    (pred - label) / ((pred * (1. - pred)) + epsilon)
-}
-

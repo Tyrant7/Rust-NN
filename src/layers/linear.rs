@@ -62,4 +62,3 @@ impl Layer for Linear {
         self.bgrads = Array2::zeros(self.bias.raw_dim());
     }
 }
-

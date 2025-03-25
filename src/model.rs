@@ -13,15 +13,23 @@ impl Model {
         }
     }
 
-    pub fn forward(&mut self, input: Array2<f32>) -> Array2<f32> {
-        let mut forward_signal = input;
+    pub fn forward(&mut self, mut input: Array2<f32>) -> Array2<f32> {
         for layer in self.layers.iter_mut() {
-            forward_signal = layer.forward(&forward_signal);
+            input = layer.forward(&input);
         }
-        forward_signal
+        input
     }
 
-    pub fn backward(&mut self, loss_fn) {
-        
+    pub fn backward(&mut self, mut error: Array2<f32>) {
+        for layer in self.layers.iter_mut().rev() {
+            error = layer.backward(&error);
+        }
+    }
+
+    pub fn apply_gradients(&mut self, lr: f32, batch_size: usize) {
+        for layer in self.layers.iter_mut() {
+            layer.apply_gradients(lr, batch_size);
+            layer.zero_gradients();
+        }
     }
 }
