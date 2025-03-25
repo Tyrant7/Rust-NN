@@ -5,5 +5,5 @@ pub trait LossFunction {
     fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32>;
 }
 
-mod binary_cross_entropy_loss;
-use binary_cross_entropy_loss::BCELoss;
+pub mod binary_cross_entropy_loss;
+pub use binary_cross_entropy_loss::BCELoss;

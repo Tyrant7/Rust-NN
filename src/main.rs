@@ -1,3 +1,4 @@
+use loss_functions::LossFunction;
 use ndarray::Array2;
 
 mod model;
@@ -10,6 +11,7 @@ use layers::ReLU;
 use layers::Sigmoid;
 
 mod loss_functions;
+use loss_functions::BCELoss;
 
 fn main() {
     let mut network = Model::new(vec![
@@ -39,16 +41,11 @@ fn main() {
 
             let pred = network.forward(x);
 
-            println!("output: {}, actual {}", pred, label);
-
-            let cost = binary_cross_entroy_loss(&pred, &label);
+            let cost = BCELoss::original(&pred, &label);
             avg_cost += cost;
 
-            // Cost derivative
-            let error = binary_cross_entroy_loss_derivative(&pred, &label);
-
             // Back propagation
-            network.backward(error);
+            network.backward(BCELoss::derivative(&pred, &label));
         }
 
         // Gradient application
