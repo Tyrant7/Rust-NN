@@ -51,19 +51,12 @@ impl Layer for Linear {
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
-        let mut params = Vec::new();
-        for (weight, grad) in self.weights.iter_mut().zip(self.wgrads.iter_mut()) {
-            params.push(Parameter {
-                value: weight,
-                gradient: grad
-            });
-        }
-        for (bias, grad) in self.bias.iter_mut().zip(self.bgrads.iter_mut()) {
-            params.push(Parameter { 
-                value: bias, 
-                gradient: grad 
-            });
-        }
-        params
+        vec![Parameter {
+            value: &mut self.weights,
+            gradient: &mut self.wgrads,
+        }, Parameter {
+            value: &mut self.bias,
+            gradient: &mut self.bgrads,
+        }]
     }
 }

@@ -1,3 +1,5 @@
+use ndarray::Array2;
+
 use crate::layers::Parameter;
 use super::Optimizer;
 
@@ -5,12 +7,12 @@ use super::Optimizer;
 pub struct SGD {
     learning_rate: f32,
     momentum: f32,
-    velocities: Vec<f32>,
+    velocities: Vec<Array2<f32>>,
 }
 
 impl SGD {
     pub fn new(parameters: &[Parameter], learning_rate: f32, momentum: f32) -> SGD {
-        let velocities = vec![0.; parameters.len()];
+        let velocities = parameters.iter().map(|p| Array2::zeros(p.value.raw_dim())).collect();
         SGD {
             learning_rate,
             momentum,
@@ -22,9 +24,9 @@ impl SGD {
 impl Optimizer for SGD {
     fn step(&mut self, parameters: &mut [Parameter], n_samples: usize) {
         for (i, param) in parameters.iter_mut().enumerate() {
-            let grad = *param.gradient / n_samples as f32;
-            let update = self.learning_rate * grad + self.momentum * self.velocities[i];
-            *param.value -= update;
+            let grad = &*param.gradient / n_samples as f32;
+            let update = self.learning_rate * grad + self.momentum * &self.velocities[i];
+            *param.value -= &update;
 
             self.velocities[i] = update;
         }
