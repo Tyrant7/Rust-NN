@@ -9,7 +9,6 @@ pub struct Model {
 
 impl Model {
     pub fn new(layers: Vec<Box<dyn Layer>>) -> Model {
-        let forward_signals = Vec::with_capacity(layers.len());
         Model {
             layers,
             train: true,

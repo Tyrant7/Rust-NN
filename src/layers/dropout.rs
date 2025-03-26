@@ -1,7 +1,7 @@
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use ndarray::Array2;
 
-use super::{Layer, NoForwardError};
+use super::Layer;
 
 pub struct Dropout {
     rate: f32,
@@ -20,10 +20,12 @@ impl Dropout {
 }
 
 impl Layer for Dropout {
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+    type State = Array2<f32>;
+
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> (Array2<f32>, Self::State) {
         // Dropout layers are disable outside of train mode
         if !train {
-            return input.clone();
+            return (input.clone(), Array2::from_shape_simple_fn(input.raw_dim(), || 1.))
         }
         
         let mask = input.map(|_| {
@@ -33,16 +35,10 @@ impl Layer for Dropout {
                 0.
             }
         });
-        self.forward_mask = Some(mask.clone());
-
-        input * mask / (1. - self.rate)
+        (input * &mask / (1. - self.rate), mask.clone())
     }
 
-    fn backward(&mut self, delta: &Array2<f32>) -> Result<Array2<f32>, NoForwardError> {
-        let mask = match self.forward_mask.as_ref() {
-            Some(m) => m,
-            None => return Err(NoForwardError),
-        };
-        Ok(delta * mask / (1. - self.rate))
+    fn backward(&mut self, delta: &Array2<f32>, mask: Self::State) -> Array2<f32> {
+        delta * mask / (1. - self.rate)
     }
 }
