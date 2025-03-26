@@ -1,24 +1,16 @@
 use ndarray::Array2;
 
 pub trait Layer {
-    // Each layer has a custom state where it can store its forward computations
-    type State;
-
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> (Array2<f32>, Self::State);
-    fn backward(&mut self, input: &Array2<f32>, state: Self::State) -> Array2<f32>;
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32>;
+    fn backward(&mut self, input: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32>;
 
     // Not all layers have learnable parameters
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> { Vec::new() }
 }
 
-enum LayerState<S> {
-    NotComputed,
-    ForwardComputed(S),
-}
-
-struct SequentialLayer<T: Layer> {
+pub struct SequentialLayer<T: Layer> {
     layer: T,
-    state: LayerState<T::State>,
+    forward_input: Option<Array2<f32>>,
     samples: usize,
 }
 
@@ -26,21 +18,20 @@ impl<T: Layer> SequentialLayer<T> {
     fn new(layer: T) -> Self {
         SequentialLayer { 
             layer, 
-            state: LayerState::NotComputed,
+            forward_input: None,
             samples: 0,
         }
     }
 
     fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
-        let (output, state) = self.layer.forward(input, train);
-        self.state = LayerState::ForwardComputed(state);
-        output
+        self.forward_input = Some(input.clone());
+        self.layer.forward(input, train)
     }
 
     fn backward(&mut self, input: &Array2<f32>) -> Array2<f32> {
-        match &self.state {
-            LayerState::ForwardComputed(state) => self.layer.backward(input, state),
-            LayerState::NotComputed => panic!("Backward called before forward or while not in train mode"),
+        match &self.forward_input {
+            Some(forward) => self.layer.backward(input, forward),
+            None => panic!("Backward called before forward or outside of train mode"),
         }
     }
 }

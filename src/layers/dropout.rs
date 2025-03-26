@@ -20,12 +20,10 @@ impl Dropout {
 }
 
 impl Layer for Dropout {
-    type State = Array2<f32>;
-
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> (Array2<f32>, Self::State) {
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
         // Dropout layers are disable outside of train mode
         if !train {
-            return (input.clone(), Array2::from_shape_simple_fn(input.raw_dim(), || 1.))
+            return input.clone();
         }
         
         let mask = input.map(|_| {
@@ -35,10 +33,12 @@ impl Layer for Dropout {
                 0.
             }
         });
-        (input * &mask / (1. - self.rate), mask.clone())
+        self.forward_mask = Some(mask.clone());
+        input * &mask / (1. - self.rate)
     }
 
-    fn backward(&mut self, delta: &Array2<f32>, mask: Self::State) -> Array2<f32> {
+    fn backward(&mut self, delta: &Array2<f32>, _forward_input: &Array2<f32>) -> Array2<f32> {
+        let mask = self.forward_mask.as_ref().expect("No mask created during forward pass or forward never called");
         delta * mask / (1. - self.rate)
     }
 }

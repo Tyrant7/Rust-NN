@@ -30,16 +30,13 @@ impl Linear {
 }
 
 impl Layer for Linear {
-    // Store our forward input here
-    type State = Array2<f32>;
-
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> (Array2<f32>, Self::State) {
-        (input.dot(&self.weights.t()) + &self.bias, input.clone())
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+        input.dot(&self.weights.t()) + &self.bias
     }
 
     // Here, we'll be fed the delta after the activation derivative has been applied,
     // since the activation functions will handle that portion themselves
-    fn backward(&mut self, delta: &Array2<f32>, forward_input: Self::State) -> Array2<f32> {
+    fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
 
         // Accumulate gradients in training
         self.wgrads += &forward_input.t().dot(delta).t();

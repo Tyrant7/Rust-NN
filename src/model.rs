@@ -1,9 +1,9 @@
 use ndarray::Array2;
 
-use crate::layers::{Layer, Parameter};
+use crate::layers::{Layer, Parameter, SequentialLayer};
 
 pub struct Model {
-    layers: Vec<Box<dyn Layer>>,
+    layers: Vec<SequentialLayer<Layer>>,
     train: bool,
 }
 
@@ -24,10 +24,7 @@ impl Model {
 
     pub fn backward(&mut self, mut error: Array2<f32>) {
         for layer in self.layers.iter_mut().rev() {
-            error = match layer.backward(&error) {
-                Ok(error) => error,
-                Err(_) => panic!("Backward called before forward or outside of train mode"),
-            };
+            error = layer.backward(&error);
         }
     }
 

@@ -25,10 +25,10 @@ use optimizers::SGD;
 fn main() {
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
-        Box::new(ReLU::new()),
+        Box::new(ReLU),
         Box::new(Dropout::new(0.5, 5)),
         Box::new(Linear::new_from_rand(16, 1)),
-        Box::new(Sigmoid::new()),
+        Box::new(Sigmoid),
     ]);
 
     let data = [
