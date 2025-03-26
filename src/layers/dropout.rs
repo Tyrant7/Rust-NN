@@ -6,7 +6,6 @@ use super::{Layer, NoForwardError};
 pub struct Dropout {
     rate: f32,
     rng: SmallRng,
-    forward_input: Option<Array2<f32>>,
     forward_mask: Option<Array2<f32>>,
 }
 
@@ -15,7 +14,6 @@ impl Dropout {
         Dropout {
             rate,
             rng: SmallRng::seed_from_u64(seed),
-            forward_input: None,
             forward_mask: None,
         }
     }
@@ -27,8 +25,6 @@ impl Layer for Dropout {
         if !train {
             return input.clone();
         }
-
-        self.forward_input = Some(input.clone());
         
         let mask = input.map(|_| {
             if self.rng.random::<f32>() > self.rate {
