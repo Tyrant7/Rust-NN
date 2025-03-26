@@ -1,9 +1,10 @@
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use ndarray::Array2;
 
-use super::Layer;
+use super::{Layer, NoForwardError};
 
 pub struct Dropout {
+    train: bool,
     rate: f32,
     rng: SmallRng,
     forward_input: Option<Array2<f32>>,
@@ -13,6 +14,7 @@ pub struct Dropout {
 impl Dropout {
     pub fn new(rate: f32, seed: u64) -> Dropout {
         Dropout {
+            train: true,
             rate,
             rng: SmallRng::seed_from_u64(seed),
             forward_input: None,
@@ -22,7 +24,12 @@ impl Dropout {
 }
 
 impl Layer for Dropout {
-    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+        // Dropout layers are disable outside of train mode
+        if !train {
+            return input.clone();
+        }
+
         self.forward_input = Some(input.clone());
         
         let mask = input.map(|_| {
@@ -37,8 +44,11 @@ impl Layer for Dropout {
         input * mask / (1. - self.rate)
     }
 
-    fn backward(&mut self, delta: &Array2<f32>) -> Array2<f32> {
-        let mask = self.forward_mask.as_ref().expect("Backward called before forward");
-        delta * mask / (1. - self.rate)
+    fn backward(&mut self, delta: &Array2<f32>) -> Result<Array2<f32>, NoForwardError> {
+        let mask = match self.forward_mask.as_ref() {
+            Some(m) => m,
+            None => return Err(NoForwardError),
+        };
+        Ok(delta * mask / (1. - self.rate))
     }
 }

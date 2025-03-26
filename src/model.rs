@@ -4,25 +4,30 @@ use crate::layers::{Layer, Parameter};
 
 pub struct Model {
     layers: Vec<Box<dyn Layer>>,
+    train: bool,
 }
 
 impl Model {
     pub fn new(layers: Vec<Box<dyn Layer>>) -> Model {
         Model {
             layers,
+            train: true,
         }
     }
 
     pub fn forward(&mut self, mut input: Array2<f32>) -> Array2<f32> {
         for layer in self.layers.iter_mut() {
-            input = layer.forward(&input);
+            input = layer.forward(&input, self.train);
         }
         input
     }
 
     pub fn backward(&mut self, mut error: Array2<f32>) {
         for layer in self.layers.iter_mut().rev() {
-            error = layer.backward(&error);
+            error = match layer.backward(&error) {
+                Ok(error) => error,
+                Err(_) => panic!("Backward called before forward or backward called outside of train mode!"),
+            };
         }
     }
 
@@ -32,5 +37,13 @@ impl Model {
             parameters.extend(layer.get_learnable_parameters());
         }
         parameters
+    }
+
+    pub fn set_train_mode(&mut self, train: bool) {
+        self.train = train
+    }
+
+    pub fn is_training(&self) -> bool {
+        self.train
     }
 }

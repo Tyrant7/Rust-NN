@@ -1,5 +1,5 @@
 use ndarray::Array2;
-use super::Layer;
+use super::{Layer, NoForwardError};
 
 pub struct Sigmoid {
     forward_z: Option<Array2<f32>>,
@@ -16,17 +16,22 @@ impl Sigmoid {
 }
 
 impl Layer for Sigmoid {
-    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
-        self.forward_z = Some(input.clone());
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+        if train {
+            self.forward_z = Some(input.clone());
+        }
         Sigmoid::sigmoid(input)
     }
 
-    fn backward(&mut self, error: &Array2<f32>) -> Array2<f32> {
-        let forward_z = self.forward_z.as_ref().expect("Backward called before forward");
+    fn backward(&mut self, error: &Array2<f32>) -> Result<Array2<f32>, NoForwardError> {
+        let forward_z = match self.forward_z.as_ref() {
+            Some(z) => z,
+            None => return Err(NoForwardError)
+        };
 
         let sig = Sigmoid::sigmoid(forward_z);
         let activation_derivative = &sig * (1. - &sig);
 
-        error * activation_derivative
+        Ok(error * activation_derivative)
     }
 }

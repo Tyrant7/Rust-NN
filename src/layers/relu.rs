@@ -1,5 +1,5 @@
 use ndarray::Array2;
-use super::Layer;
+use super::{Layer, NoForwardError};
 
 pub struct ReLU {
     forward_z: Option<Array2<f32>>,
@@ -12,15 +12,20 @@ impl ReLU {
 }
 
 impl Layer for ReLU {
-    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
         // Keep track of the input before activation to handle it during backprop
-        self.forward_z = Some(input.clone());
+        if train {
+            self.forward_z = Some(input.clone());
+        }
         input.clone().mapv_into(|x| x.max(0.))
     }
 
-    fn backward(&mut self, error: &Array2<f32>) -> Array2<f32> {
-        let forward_z = self.forward_z.as_ref().expect("Backward called before forward");
+    fn backward(&mut self, error: &Array2<f32>) -> Result<Array2<f32>, NoForwardError> {
+        let forward_z = match self.forward_z.as_ref() {
+            Some(z) => z,
+            None => return Err(NoForwardError)
+        };
         let activation_derivative = forward_z.clone().mapv_into(|x| if x <= 0. { 0. } else { 1. });
-        error * activation_derivative
+        Ok(error * activation_derivative)
     }
 }

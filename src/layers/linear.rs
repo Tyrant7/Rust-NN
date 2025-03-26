@@ -1,7 +1,9 @@
+use std::mem::transmute_copy;
+
 use rand::Rng;
 use ndarray::{Array2, Axis};
 
-use super::{Layer, Parameter};
+use super::{Layer, NoForwardError, Parameter};
 
 pub struct Linear {
     weights: Array2<f32>,
@@ -32,22 +34,27 @@ impl Linear {
 }
 
 impl Layer for Linear {
-    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
-        self.forward_input = Some(input.clone());
+    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+        if train { 
+            self.forward_input = Some(input.clone()); 
+        }
         input.dot(&self.weights.t()) + &self.bias
     }
 
     // Here, we'll be fed the delta after the activation derivative has been applied,
     // since the activation functions will handle that portion themselves
-    fn backward(&mut self, delta: &Array2<f32>) -> Array2<f32> {
-        let forward_input = self.forward_input.as_ref().expect("Backward called before forward");
-
-        // Accumulate gradients
+    fn backward(&mut self, delta: &Array2<f32>) -> Result<Array2<f32>, NoForwardError> {
+        let forward_input = match self.forward_input.as_ref() {
+            Some(a) => a,
+            None => return Err(NoForwardError),
+        };
+        
+        // Accumulate gradients in training
         self.wgrads += &forward_input.t().dot(delta).t();
         self.bgrads += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer
-        delta.dot(&self.weights)
+        Ok(delta.dot(&self.weights))
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
