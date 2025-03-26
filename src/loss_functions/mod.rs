@@ -7,3 +7,6 @@ pub trait LossFunction {
 
 pub mod binary_cross_entropy_loss;
 pub use binary_cross_entropy_loss::BCELoss;
+
+pub mod mean_squared_error_loss;
+pub use mean_squared_error_loss::MSELoss;

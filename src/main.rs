@@ -14,7 +14,7 @@ use layers::Sigmoid;
 //
 mod loss_functions;
 use loss_functions::LossFunction;
-use loss_functions::BCELoss;
+use loss_functions::MSELoss;
 
 //
 mod optimizers;
@@ -49,11 +49,11 @@ fn main() {
 
             let pred = network.forward(x);
 
-            let cost = BCELoss::original(&pred, &label);
+            let cost = MSELoss::original(&pred, &label);
             avg_cost += cost;
 
             // Back propagation
-            network.backward(BCELoss::derivative(&pred, &label));
+            network.backward(MSELoss::derivative(&pred, &label));
         }
 
         // Gradient application
