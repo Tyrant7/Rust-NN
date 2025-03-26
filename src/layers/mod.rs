@@ -16,6 +16,9 @@ pub struct Parameter<'a> {
 pub mod linear;
 pub use linear::Linear;
 
+pub mod dropout;
+pub use dropout::Dropout;
+
 pub mod relu;
 pub use relu::ReLU;
 pub mod sigmoid;

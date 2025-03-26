@@ -7,6 +7,7 @@ use model::Model;
 //
 mod layers;
 use layers::Linear;
+use layers::Dropout;
 
 use layers::ReLU;
 use layers::Sigmoid;
@@ -25,6 +26,7 @@ fn main() {
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
         Box::new(ReLU::new()),
+        Box::new(Dropout::new(0.5, 5)),
         Box::new(Linear::new_from_rand(16, 1)),
         Box::new(Sigmoid::new()),
     ]);
