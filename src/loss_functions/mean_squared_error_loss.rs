@@ -9,6 +9,7 @@ impl LossFunction for MSELoss {
     }
 
     fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32> {
+        // With respect to 'pred'
         -(label - pred) * 2.
     }
 }
