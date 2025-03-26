@@ -26,7 +26,7 @@ impl Model {
         for layer in self.layers.iter_mut().rev() {
             error = match layer.backward(&error) {
                 Ok(error) => error,
-                Err(_) => panic!("Backward called before forward or backward called outside of train mode!"),
+                Err(_) => panic!("Backward called before forward or outside of train mode"),
             };
         }
     }

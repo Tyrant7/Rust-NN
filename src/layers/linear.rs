@@ -1,5 +1,3 @@
-use std::mem::transmute_copy;
-
 use rand::Rng;
 use ndarray::{Array2, Axis};
 

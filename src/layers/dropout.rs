@@ -4,7 +4,6 @@ use ndarray::Array2;
 use super::{Layer, NoForwardError};
 
 pub struct Dropout {
-    train: bool,
     rate: f32,
     rng: SmallRng,
     forward_input: Option<Array2<f32>>,
@@ -14,7 +13,6 @@ pub struct Dropout {
 impl Dropout {
     pub fn new(rate: f32, seed: u64) -> Dropout {
         Dropout {
-            train: true,
             rate,
             rng: SmallRng::seed_from_u64(seed),
             forward_input: None,
