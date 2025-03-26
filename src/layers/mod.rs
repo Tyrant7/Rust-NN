@@ -9,8 +9,8 @@ pub trait Layer {
 }
 
 pub struct Parameter<'a> {
-    pub value: &'a mut f32,
-    pub gradient: &'a mut f32,
+    pub value: &'a mut Array2<f32>,
+    pub gradient: &'a mut Array2<f32>,
 }
 
 pub mod linear;
