@@ -1,4 +1,4 @@
-use crate::{layers::Parameter, model::Model};
+use crate::layers::Parameter;
 use super::Optimizer;
 
 #[allow(clippy::upper_case_acronyms)]
@@ -20,15 +20,13 @@ impl SGD {
 }
 
 impl Optimizer for SGD {
-    fn step(&mut self, network: &mut Model) {
-        let n_samples = network.get_samples();
-        for (i, param) in network.collect_parameters().iter_mut().enumerate() {
+    fn step(&mut self, parameters: &mut [Parameter], n_samples: usize) {
+        for (i, param) in parameters.iter_mut().enumerate() {
             let grad = *param.gradient / n_samples as f32;
             let update = self.learning_rate * grad + self.momentum * self.velocities[i];
             *param.value -= update;
 
             self.velocities[i] = update;
         }
-        network.zero_gradients();
     }
 }

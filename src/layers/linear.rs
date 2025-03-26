@@ -66,9 +66,4 @@ impl Layer for Linear {
         }
         params
     }
-
-    fn zero_gradients(&mut self) {
-        self.wgrads = Array2::zeros(self.weights.raw_dim());
-        self.bgrads = Array2::zeros(self.bias.raw_dim());
-    }
 }

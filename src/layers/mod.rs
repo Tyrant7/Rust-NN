@@ -5,7 +5,6 @@ pub trait Layer {
     fn backward(&mut self, error: &Array2<f32>) -> Array2<f32>;
 
     // Not all layers have learnable parameters
-    fn zero_gradients(&mut self) {}
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> { Vec::new() }
 }
 

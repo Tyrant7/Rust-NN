@@ -57,7 +57,10 @@ fn main() {
         }
 
         // Gradient application
-        optimizer.step(&mut network);
+        optimizer.step(&mut network.collect_parameters(), data.len());
+
+        // Zero gradients before next epoch
+        optimizer.zero_gradients(&mut network.collect_parameters());
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
