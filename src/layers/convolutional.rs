@@ -1,9 +1,15 @@
 use rand::Rng;
-use ndarray::{Array2, Axis};
+use ndarray::{Array2, ArrayBase, Axis, Data, Dimension};
 
 use super::{Layer, Parameter};
 
-pub struct Convolutional {
+pub struct Convolutional<T, D>
+where 
+    T: Data<Elem = f32>,
+    D: Dimension,
+{
+    dimensions: ArrayBase<T, D>,
+
     weights: Array2<f32>,
     bias: Array2<f32>,
     wgrads: Array2<f32>,
