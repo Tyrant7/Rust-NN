@@ -30,7 +30,7 @@ impl Linear {
 }
 
 impl Layer for Linear {
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         input.dot(&self.weights.t()) + &self.bias
     }
 

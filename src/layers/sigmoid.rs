@@ -10,12 +10,12 @@ impl Sigmoid {
 }
 
 impl Layer for Sigmoid {
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         Sigmoid::sigmoid(input)
     }
 
     fn backward(&mut self, error: &Array2<f32>, forward_z: &Array2<f32>) -> Array2<f32> {
-        let sig = Sigmoid::sigmoid(&forward_z);
+        let sig = Sigmoid::sigmoid(forward_z);
         let activation_derivative = &sig * (1. - &sig);
         error * activation_derivative
     }

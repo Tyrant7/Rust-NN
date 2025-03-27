@@ -6,7 +6,6 @@ pub struct Model {
     layers: Vec<Box<dyn Layer>>,
     forward_inputs: Vec<Option<Array2<f32>>>,
     train: bool,
-    samples: usize,
 }
 
 impl Model {
@@ -16,13 +15,14 @@ impl Model {
             layers,
             forward_inputs,
             train: true,
-            samples: 0,
         }
     }
 
     pub fn forward(&mut self, mut input: Array2<f32>) -> Array2<f32> {
         for (layer, layer_input) in self.layers.iter_mut().zip(self.forward_inputs.iter_mut()) {
-            *layer_input = Some(input.clone());
+            if self.train {
+                *layer_input = Some(input.clone());
+            }
             input = layer.forward(&input, self.train);
         }
         input

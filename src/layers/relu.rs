@@ -4,7 +4,7 @@ use super::Layer;
 pub struct ReLU;
 
 impl Layer for ReLU {
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
+    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         input.clone().mapv_into(|x| x.max(0.))
     }
 
