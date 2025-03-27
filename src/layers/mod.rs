@@ -19,6 +19,9 @@ pub use linear::Linear;
 pub mod dropout;
 pub use dropout::Dropout;
 
+pub mod convolutional;
+pub use convolutional::Convolutional;
+
 pub mod relu;
 pub use relu::ReLU;
 pub mod sigmoid;
