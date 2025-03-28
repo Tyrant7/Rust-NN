@@ -1,28 +1,41 @@
+use ndarray_conv::ConvExt;
 use rand::Rng;
-use ndarray::{Array2, ArrayBase, Axis, Data, Dimension};
+use ndarray::{s, Array1, Array2, Array3, Axis};
 
 use super::{Layer, Parameter};
 
-pub struct Convolutional<T, D>
-where 
-    T: Data<Elem = f32>,
-    D: Dimension,
+pub struct Convolutional1D
 {
-    dimensions: ArrayBase<T, D>,
+    kernels: Array3<f32>,
+    bias: Array1<f32>,
 
-    weights: Array2<f32>,
-    bias: Array2<f32>,
-    wgrads: Array2<f32>,
-    bgrads: Array2<f32>,
+    kgrads: Array3<f32>,
+    bgrads: Array1<f32>,
+
+    stride: usize,
+    padding: usize,
 }
 
-impl Convolutional {
-    pub fn new_from_rand() -> Convolutional {
-        unimplemented!();
+impl Convolutional1D {
+    pub fn new_from_rand(in_features: usize, out_features: usize, kernel_size: usize, stride: usize, padding: usize) -> Self {
+        let mut rng = rand::rng();
+
+        let kernels = Array3::from_shape_fn((kernel_size, in_features, out_features), |_| rng.random_range(-1.0..1.));
+        let bias = Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.));
+        let kgrads = Array3::zeros(kernels.raw_dim());
+        let bgrads = Array1::zeros(bias.raw_dim());
+        Convolutional1D { 
+            kernels, 
+            bias, 
+            kgrads, 
+            bgrads, 
+            stride,
+            padding,
+        }
     }
 }
 
-impl Layer for Convolutional {
+impl Layer for Convolutional1D {
     fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         unimplemented!();
     }

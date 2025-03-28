@@ -20,7 +20,7 @@ pub mod dropout;
 pub use dropout::Dropout;
 
 pub mod convolutional;
-pub use convolutional::Convolutional;
+pub use convolutional::Convolutional1D;
 
 pub mod relu;
 pub use relu::ReLU;

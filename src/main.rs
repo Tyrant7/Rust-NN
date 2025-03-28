@@ -1,3 +1,5 @@
+use layers::Convolutional1D;
+use layers::Layer;
 use ndarray::Array2;
 
 //
@@ -23,6 +25,17 @@ use optimizers::Optimizer;
 use optimizers::SGD;
 
 fn main() {
+
+    let mut conv_1d = Convolutional1D::new_from_rand(3, 1, 2, 1, 0);
+    
+    let input = Array2::from_shape_vec((1, 3), [1_f32, 0.5, 0.2].to_vec()).unwrap();
+    let output = conv_1d.forward(&input, true);
+    
+    println!("input:  {}", input);
+    println!("output: {}", output);
+
+    panic!("Done");
+
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
         Box::new(ReLU),
@@ -47,7 +60,7 @@ fn main() {
         // Iterate over our entire dataset to collect gradients before applying them
         for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 1), |(_i, _j)| *label);
+            let label = Array2::from_shape_fn((1, 1), |_| *label);
 
             let pred = network.forward(x);
 

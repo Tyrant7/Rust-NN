@@ -16,8 +16,8 @@ impl Linear {
         outputs: usize, 
     ) -> Linear {
         let mut rng = rand::rng();
-        let weights = Array2::from_shape_fn((outputs, inputs), |(_i, _j)| rng.random_range(-1.0..1.));
-        let bias = Array2::from_shape_fn((1, outputs), |(_i, _j)| rng.random_range(-1.0..1.));
+        let weights = Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.));
+        let bias = Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.));
         let wgrads = Array2::zeros(weights.raw_dim());
         let bgrads = Array2::zeros(bias.raw_dim());
         Linear {
