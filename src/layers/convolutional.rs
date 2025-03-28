@@ -1,6 +1,5 @@
-use ndarray_conv::ConvExt;
 use rand::Rng;
-use ndarray::{s, Array1, Array2, Array3, Axis};
+use ndarray::{Array1, Array2, Array3};
 
 use super::{Layer, Parameter};
 
