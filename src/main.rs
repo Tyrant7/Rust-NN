@@ -1,6 +1,6 @@
 use layers::Convolutional1D;
 use layers::Layer;
-use ndarray::Array2;
+use ndarray::{Array2, Array3};
 
 //
 mod model;
@@ -26,9 +26,9 @@ use optimizers::SGD;
 
 fn main() {
 
-    let mut conv_1d = Convolutional1D::new_from_rand(3, 1, 2, 1, 0);
+    let mut conv_1d = Convolutional1D::new_from_rand(7, 2, 2, 1, 0);
     
-    let input = Array2::from_shape_vec((1, 3), [1_f32, 0.5, 0.2].to_vec()).unwrap();
+    let input = Array3::from_shape_vec((1, 7, 1), [1_f32, 0.5, 0.2, 1.5, 1.2, 0.5, 0.3].to_vec()).unwrap();
     let output = conv_1d.forward(&input, true);
     
     println!("input:  {}", input);
