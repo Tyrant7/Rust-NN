@@ -1,0 +1,20 @@
+# TODO
+
+## Layer types:
+
+-   Finish 1D convolutional layers
+-   2D convolutional layers
+-   3D convolutional layers
+-   Max pooling
+-   Avg pooling
+-   Min pooling
+-   Batch norm
+
+## Other features:
+
+-   Gradient clipping
+-   Pretty model and layer printouts
+-   Finish tests for all features and layer types
+-   Additional sample problems, harder than XOR
+-   More loss functions (MAE, Huber Loss, etc.)
+-   More activation functions (leaky ReLU, Tanh, etc.)
