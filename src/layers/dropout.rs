@@ -3,6 +3,7 @@ use ndarray::Array2;
 
 use super::Layer;
 
+#[derive(Debug)]
 pub struct Dropout {
     rate: f32,
     rng: SmallRng,

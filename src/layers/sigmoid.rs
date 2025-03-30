@@ -1,6 +1,7 @@
 use ndarray::Array2;
 use super::Layer;
 
+#[derive(Debug)]
 pub struct Sigmoid;
 
 impl Sigmoid {

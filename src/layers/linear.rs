@@ -3,6 +3,7 @@ use ndarray::{Array2, Axis};
 
 use super::{Layer, Parameter};
 
+#[derive(Debug)]
 pub struct Linear {
     weights: Array2<f32>,
     bias: Array2<f32>,

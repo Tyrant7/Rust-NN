@@ -2,6 +2,7 @@ use ndarray::Array2;
 
 use crate::layers::{Layer, Parameter};
 
+#[derive(Debug)]
 pub struct Model {
     layers: Vec<Box<dyn Layer>>,
     forward_inputs: Vec<Option<Array2<f32>>>,
