@@ -1,8 +1,15 @@
 # TODO
 
+## Currently working on:
+
+-   Finish 1D convolutional layers (backprop)
+
+## Next up:
+
+-   Better layer abstraction, potentially using an enum
+
 ## Layer types:
 
--   Finish 1D convolutional layers
 -   2D convolutional layers
 -   3D convolutional layers
 -   Max pooling
