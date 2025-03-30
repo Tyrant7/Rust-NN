@@ -16,11 +16,27 @@ pub struct Convolutional1D
 }
 
 impl Convolutional1D {
-    pub fn new_from_rand(in_features: usize, out_features: usize, kernel_size: usize, stride: usize, padding: usize) -> Self {
-        let mut rng = rand::rng();
-
+    pub fn new_from_rand(
+        in_features: usize, 
+        out_features: usize, 
+        kernel_size: usize, 
+        stride: usize, 
+        padding: usize
+    ) -> Self {
+        // let mut rng = rand::rng();
         // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
         let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
+        Convolutional1D::new_from_kernel(out_features, kernels, stride, padding)
+    }
+
+    pub fn new_from_kernel(
+        out_features: usize, 
+        kernels: Array3<f32>, 
+        stride: usize, 
+        padding: usize
+    ) -> Self {
+        let mut rng = rand::rng();
+
         let bias = Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.));
         let kgrads = Array3::zeros(kernels.raw_dim());
         let bgrads = Array1::zeros(bias.raw_dim());
@@ -29,8 +45,8 @@ impl Convolutional1D {
             bias, 
             kgrads, 
             bgrads, 
-            stride,
-            padding,
+            stride, 
+            padding 
         }
     }
 }

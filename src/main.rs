@@ -2,6 +2,9 @@ use layers::Convolutional1D;
 use layers::Layer;
 use ndarray::{Array2, Array3};
 
+// 
+mod tests;
+
 //
 mod model;
 use model::Model;
