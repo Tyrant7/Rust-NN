@@ -16,6 +16,8 @@
 -   Avg pooling
 -   Min pooling
 -   Batch norm
+-   RNN support
+    -   LSTM support
 
 ## Other features:
 
