@@ -6,7 +6,7 @@ use crate::layers::{Layer, Parameter};
 pub struct Model {
     layers: Vec<Box<dyn Layer>>,
     forward_inputs: Vec<Option<Array2<f32>>>,
-    train: bool,
+    pub train: bool,
 }
 
 impl Model {
@@ -46,13 +46,5 @@ impl Model {
         parameters
     }
 
-    pub fn set_train_mode(&mut self, train: bool) {
-        self.train = train
-    }
-
-    pub fn is_training(&self) -> bool {
-        self.train
-    }
-
-    // TODO: "inspect()" method to print model layers
+    // TODO: "inspect()" method to print model layers in a prettier way
 }
