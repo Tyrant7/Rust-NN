@@ -28,7 +28,9 @@ fn main() {
 
     let mut conv_1d = Convolutional1D::new_from_rand(7, 2, 2, 1, 0);
     
-    let input = Array3::from_shape_vec((1, 7, 1), [1_f32, 0.5, 0.2, 1.5, 1.2, 0.5, 0.3].to_vec()).unwrap();
+    let input = Array3::from_shape_vec((1, 2, 7), 
+        [0_f32, 1., 2., 3., 4., 5., 6.,
+        0_f32, 2., 4., 6., 8., 10., 12.].to_vec()).unwrap();
     let output = conv_1d.forward(&input, true);
     
     println!("input:  {}", input);

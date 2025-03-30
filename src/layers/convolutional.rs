@@ -1,5 +1,5 @@
 use rand::Rng;
-use ndarray::{s, stack, Array1, Array2, Array3, Axis, Dim, Ix2, Ix3};
+use ndarray::{s, Array1, Array2, Array3, Axis};
 
 use super::{Layer, Parameter};
 
@@ -20,7 +20,7 @@ impl Convolutional1D {
         let mut rng = rand::rng();
 
         // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
-        let kernels = Array3::from_shape_fn((in_features, out_features, kernel_size), |_| 1.);
+        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
         let bias = Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.));
         let kgrads = Array3::zeros(kernels.raw_dim());
         let bgrads = Array1::zeros(bias.raw_dim());
@@ -36,15 +36,14 @@ impl Convolutional1D {
 }
 
 impl /* Layer for */ Convolutional1D {
-    // Input shape: (batch_size, in_features)
-    fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
-        let batch_size = input.dim().0;
+    pub fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
+        let (batch_size, in_features, sample_size) = input.dim();
 
         // Pad the input
         let padded_input = {
             if self.padding > 0 {
-                let mut padded = Array3::zeros((batch_size, input.dim().1 + self.padding * 2, input.dim().2));
-                padded.slice_mut(s![0..batch_size, self.padding..padded.dim().1 - self.padding, 0..input.dim().2]).assign(input);
+                let mut padded = Array3::zeros((batch_size, in_features + self.padding * 2, sample_size));
+                padded.slice_mut(s![0..batch_size, 0..in_features, self.padding..sample_size - self.padding]).assign(input);
                 padded
             } else {
                 input.clone()
@@ -52,17 +51,24 @@ impl /* Layer for */ Convolutional1D {
         };
 
         // 1D convolution
-        let mut output = Array2::zeros((batch_size, self.kernels.dim().1));
-        for (o, kernel) in self.kernels.outer_iter().enumerate() {
+        let (out_features, _, kernel_size) = self.kernels.dim();
+        let output_size = ((sample_size - kernel_size + (2 * self.padding)) / self.stride) + 1;
+        let mut output = Array3::zeros((batch_size, out_features, output_size));
 
-            println!("O: {}", o);
-            println!("K: {:?}", kernel.dim());
+        // Iterate over input samples across batch_size dimension
+        for (b, sample) in padded_input.axis_iter(Axis(0)).enumerate() {
 
-            for b in 0..batch_size {
-                let windows: Vec<ndarray::ArrayBase<ndarray::ViewRepr<&f32>, Dim<[usize; 2]>>> = padded_input
-                    .windows_with_stride(kernel.raw_dim(), Ix3(1, self.stride, 1)).into_iter().collect();
-                for window in windows {
-                    output[[b, o]] += (&kernel * &window).sum();
+            // Iterate over kernels across kernel_size dimension
+            for (f, kernel) in self.kernels.axis_iter(Axis(0)).enumerate() {
+
+                // Iterate over input sample features across in_features dimension
+                for (in_f, in_feature) in sample.axis_iter(Axis(0)).enumerate() {
+
+                    // Iterate over windows of input feature
+                    let windows = in_feature.windows_with_stride(kernel_size, self.stride);
+                    for (i, window) in windows.into_iter().enumerate() {
+                        output[[b, f, i]] += (&window * &kernel.slice(s![in_f, ..])).sum();
+                    }
                 }
             }
         }
