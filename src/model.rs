@@ -52,4 +52,6 @@ impl Model {
     pub fn is_training(&self) -> bool {
         self.train
     }
+
+    // TODO: "inspect()" method to print model layers
 }

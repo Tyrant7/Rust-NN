@@ -94,10 +94,12 @@ impl /* Layer for */ Convolutional1D {
     // Here, we'll be fed the delta after the activation derivative has been applied,
     // since the activation functions will handle that portion themselves
     fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
+        // TODO
         unimplemented!();
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
+        // TODO
         unimplemented!();
     }
 }

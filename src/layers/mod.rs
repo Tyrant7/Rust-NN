@@ -1,5 +1,8 @@
 use ndarray::Array2;
 
+// TODO: We need some way to support layers that take different input types
+// -> Probably use an enum
+
 pub trait Layer {
     fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32>;
     fn backward(&mut self, input: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32>;
