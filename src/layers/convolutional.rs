@@ -59,7 +59,7 @@ impl /* Layer for */ Convolutional1D {
         let padded_input = {
             if self.padding > 0 {
                 let mut padded = Array3::zeros((batch_size, in_features, sample_size + self.padding * 2));
-                padded.slice_mut(s![0..batch_size, 0..in_features, self.padding..sample_size - self.padding]).assign(input);
+                padded.slice_mut(s![0..batch_size, 0..in_features, self.padding..sample_size + self.padding]).assign(input);
                 padded
             } else {
                 input.clone()
