@@ -43,10 +43,7 @@ impl Convolutional1D {
         padding: usize,
     ) -> Self {
         let kgrads = Array3::zeros(kernels.raw_dim());
-        let bgrads = match &bias {
-            Some(b) => Some(Array1::zeros(b.raw_dim())),
-            None => None,
-        };
+        let bgrads = bias.as_ref().map(|b| Array1::zeros(b.raw_dim()));
         Convolutional1D { 
             kernels, 
             bias, 

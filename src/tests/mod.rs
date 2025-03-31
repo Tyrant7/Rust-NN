@@ -32,7 +32,7 @@ mod conv {
         println!("target: \n{}", target);
 
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
-        let biases = Array1::from_elem((2), 1.);
+        let biases = Array1::from_elem(2, 1.);
         let mut conv_1d = Convolutional1D::new_from_kernel(kernels, Some(biases), 2, 1);
     
         let input = Array3::from_shape_vec((1, 2, 7), vec![

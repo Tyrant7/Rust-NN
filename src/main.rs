@@ -1,7 +1,4 @@
-use core::net;
-
 use layers::Convolutional1D;
-use layers::Layer;
 use ndarray::{Array2, Array3};
 
 // 
