@@ -6,10 +6,10 @@ use super::{Layer, Parameter};
 pub struct Convolutional1D
 {
     kernels: Array3<f32>,
-    bias: Array1<f32>,
+    bias: Option<Array1<f32>>,
 
     kgrads: Array3<f32>,
-    bgrads: Array1<f32>,
+    bgrads: Option<Array1<f32>>,
 
     stride: usize,
     padding: usize,
@@ -20,26 +20,33 @@ impl Convolutional1D {
         in_features: usize, 
         out_features: usize, 
         kernel_size: usize, 
+        use_bias: bool,
         stride: usize, 
-        padding: usize
-    ) -> Self {
-        // let mut rng = rand::rng();
-        // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
-        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
-        Convolutional1D::new_from_kernel(out_features, kernels, stride, padding)
-    }
-
-    pub fn new_from_kernel(
-        out_features: usize, 
-        kernels: Array3<f32>, 
-        stride: usize, 
-        padding: usize
+        padding: usize,
     ) -> Self {
         let mut rng = rand::rng();
 
-        let bias = Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.));
+        // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
+        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
+        let bias = match use_bias {
+            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
+            false => None,
+        };
+        
+        Convolutional1D::new_from_kernel(kernels, bias, stride, padding)
+    }
+
+    pub fn new_from_kernel(
+        kernels: Array3<f32>, 
+        bias: Option<Array1<f32>>,
+        stride: usize, 
+        padding: usize,
+    ) -> Self {
         let kgrads = Array3::zeros(kernels.raw_dim());
-        let bgrads = Array1::zeros(bias.raw_dim());
+        let bgrads = match &bias {
+            Some(b) => Some(Array1::zeros(b.raw_dim())),
+            None => None,
+        };
         Convolutional1D { 
             kernels, 
             bias, 
@@ -88,6 +95,15 @@ impl /* Layer for */ Convolutional1D {
                 }
             }
         }
+        // Apply bias to the second dimension (features)
+        if let Some(b) = &self.bias {
+            output += &b.view()
+                .insert_axis(Axis(0))
+                .insert_axis(Axis(2))
+                .broadcast(output.dim())
+                .unwrap();
+        }
+
         output
     }
 

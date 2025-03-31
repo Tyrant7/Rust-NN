@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod conv {
-    use ndarray::Array3;
+    use ndarray::{Array1, Array3};
 
     use crate::layers::Convolutional1D;
 
@@ -9,7 +9,7 @@ mod conv {
     #[test]
     fn conv_1d() {
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
-        let mut conv_1d = Convolutional1D::new_from_kernel(2, kernels, 1, 0);
+        let mut conv_1d = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
     
         let input = Array3::from_shape_vec((1, 2, 7), vec![
             0_f32, 1., 2., 3., 4., 5., 6.,
@@ -26,13 +26,14 @@ mod conv {
             assert_eq!(*i, *j);
         }
 
-        println!("Conv1D stride=1 padding=0:\n");
+        println!("Conv1D bias=0. stride=1 padding=0:\n");
         println!("input:  \n{}", input);
         println!("output: \n{}", output);
         println!("target: \n{}", target);
 
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
-        let mut conv_1d = Convolutional1D::new_from_kernel(2, kernels, 2, 1);
+        let biases = Array1::from_elem((2), 1.);
+        let mut conv_1d = Convolutional1D::new_from_kernel(kernels, Some(biases), 2, 1);
     
         let input = Array3::from_shape_vec((1, 2, 7), vec![
             0_f32, 1., 2., 3., 4., 5., 8.,
@@ -41,11 +42,11 @@ mod conv {
         let output = conv_1d.forward(&input, true);
         
         let target = Array3::from_shape_vec((1, 2, 4), vec![
-            0_f32, -6., -14., -18.,
-            0.,    -3.,  -7.,  -9.
+            1_f32, -5., -13., -17.,
+            1.,    -2.,  -6.,  -8.
         ]).unwrap();
 
-        println!("Conv1D stride=2 padding=1:\n");
+        println!("Conv1D bias=1. stride=2 padding=1:\n");
         println!("input:  \n{}", input);
         println!("output: \n{}", output);
         println!("target: \n{}", target);
