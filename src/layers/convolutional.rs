@@ -62,6 +62,7 @@ impl /* Layer for */ Convolutional1D {
         let (batch_size, in_features, sample_size) = input.dim();
 
         // Pad the input
+        // (batch_size, in_features, width)
         let padded_input = {
             if self.padding > 0 {
                 let mut padded = Array3::zeros((batch_size, in_features, sample_size + self.padding * 2));
@@ -80,7 +81,7 @@ impl /* Layer for */ Convolutional1D {
         // Iterate over input samples across batch_size dimension
         for (b, sample) in padded_input.axis_iter(Axis(0)).enumerate() {
 
-            // Iterate over kernels across out_features dimension
+            // Iterate over input kernels across out_features dimension
             for kernels in self.kernels.axis_iter(Axis(0)) {
 
                 // Iterate over input sample features across in_features dimension
