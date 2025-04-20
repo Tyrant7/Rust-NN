@@ -1,7 +1,7 @@
 use std::char::from_digit;
 
 use rand::Rng;
-use ndarray::{s, Array1, Array2, Array3, Axis};
+use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis};
 
 use super::{Layer, Parameter};
 
@@ -80,17 +80,13 @@ impl /* Layer for */ Convolutional1D {
         // Iterate over input samples across batch_size dimension
         for (b, sample) in padded_input.axis_iter(Axis(0)).enumerate() {
 
-            // Iterate over kernels across kernel_size dimension
-            for (f, kernel) in self.kernels.axis_iter(Axis(0)).enumerate() {
+            // Iterate over kernels across out_features dimension
+            for kernels in self.kernels.axis_iter(Axis(0)) {
 
                 // Iterate over input sample features across in_features dimension
                 for (in_f, in_feature) in sample.axis_iter(Axis(0)).enumerate() {
-
-                    // Iterate over windows of input feature
-                    let windows = in_feature.windows_with_stride(kernel_size, self.stride);
-                    for (i, window) in windows.into_iter().enumerate() {
-                        output[[b, f, i]] += (&window * &kernel.slice(s![in_f, ..])).sum();
-                    }
+                    let conv = convolve1d(in_feature, kernels.slice(s![in_f, ..]), self.stride);
+                    output.slice_mut(s![b, in_f, ..]).assign(&conv);
                 }
             }
         }
@@ -176,11 +172,12 @@ impl /* Layer for */ Convolutional1D {
     }
 }
 
-fn convolve1d(matrix_1: Array1<f32>, matrix_2: Array1<f32>, stride: usize) -> Array1<f32> {
-    let mut output = Array1::from_elem(matrix_1.dim(), 0.);
-    let windows = matrix_1.windows_with_stride(matrix_2.dim(), stride);
+fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
+    let output_size = ((input.dim() - kernel.dim()) / stride) + 1;
+    let mut output = Array1::from_elem(output_size, 0.);
+    let windows = input.windows_with_stride(kernel.dim(), stride);
     for (i, window) in windows.into_iter().enumerate() {
-        output[i] += (&window * &matrix_2).sum();
+        output[i] += (&window * &kernel).sum();
     }
     output
 }
