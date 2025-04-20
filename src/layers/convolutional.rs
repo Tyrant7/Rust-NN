@@ -1,3 +1,5 @@
+use std::char::from_digit;
+
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Axis};
 
@@ -104,15 +106,81 @@ impl /* Layer for */ Convolutional1D {
         output
     }
 
-    // Here, we'll be fed the delta after the activation derivative has been applied,
-    // since the activation functions will handle that portion themselves
-    fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
-        // TODO
+    pub fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
         unimplemented!();
+        /*
+        let (batch_size, in_features, sample_size) = forward_input.dim();
+        let (out_features, _, kernel_size) = self.kernels.dim();
+
+        // To calculate gradients
+        self.kgrads = Array3::zeros(self.kernels.dim());
+
+        // Iterate over error samples across batch_size dimension
+        for (b, sample) in delta.axis_iter(Axis(0)).enumerate() {
+
+            // Iterate over kernels across kernel_size dimension
+            for (f, kernel) in self.kernels.axis_iter(Axis(0)).enumerate() {
+
+                // Iterate over error sample features across in_features dimension
+                for (in_f, in_feature) in sample.axis_iter(Axis(0)).enumerate() {
+
+                    // Iterate over windows of error feature
+                    let windows = forward_input.slice(s![b, in_f, ..]).windows_with_stride(kernel_size, self.stride);
+                    for (i, window) in windows.into_iter().enumerate() {
+                        self.kgrads[[f, in_f, i]] += window.dot(&sample[[f, i]]);
+                    }
+                }
+            }
+        }
+
+        // Create the padded loss gradient for the full convolution to calculate propagated loss signal
+        let padded_loss = {
+            let padding = (kernel_size - 1) * 2;
+            let mut padded = Array3::zeros((batch_size, out_features, sample_size + padding));
+            padded.slice_mut(s![0..batch_size, 0..in_features, padding..sample_size + padding]).assign(delta);
+            padded
+        };
+
+        let mut signal = Array3::zeros(forward_input.dim());
+
+        // Iterate over input samples across batch_size dimension
+        for (b, sample) in padded_loss.axis_iter(Axis(0)).enumerate() {
+
+            // Iterate over kernels across kernel_size dimension
+            for (f, kernel) in self.kernels.axis_iter(Axis(0)).enumerate() {
+                let kernel = kernel.slice_move(s![..;-1, ..;-1]);
+
+                // Iterate over input sample features across in_features dimension
+                for (in_f, in_feature) in sample.axis_iter(Axis(0)).enumerate() {
+
+                    // Iterate over windows of input feature
+                    let windows = in_feature.windows_with_stride(kernel_size, self.stride);
+                    for (i, window) in windows.into_iter().enumerate() {
+                        signal[[b, f, i]] += (&window * &kernel.slice(s![in_f, ..])).sum();
+                    }
+                }
+            }
+        }
+
+        println!("grads:  {}", self.kgrads);
+        println!("signal: {}", signal);
+
+        signal
+
+        */
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
         // TODO
         unimplemented!();
     }
+}
+
+fn convolve1d(matrix_1: Array1<f32>, matrix_2: Array1<f32>, stride: usize) -> Array1<f32> {
+    let mut output = Array1::from_elem(matrix_1.dim(), 0.);
+    let windows = matrix_1.windows_with_stride(matrix_2.dim(), stride);
+    for (i, window) in windows.into_iter().enumerate() {
+        output[i] += (&window * &matrix_2).sum();
+    }
+    output
 }

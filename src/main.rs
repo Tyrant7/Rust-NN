@@ -28,7 +28,7 @@ use optimizers::SGD;
 
 fn main() {
 
-    let mut conv_1d = Convolutional1D::new_from_rand(7, 2, 2, true, 1, 0);
+    let mut conv_1d = Convolutional1D::new_from_rand(7, 2, 2, false, 1, 0);
     
     let input = Array3::from_shape_vec((1, 2, 7), 
         [0_f32, 1., 2., 3., 4., 5., 6.,
@@ -37,6 +37,13 @@ fn main() {
     
     println!("input:  {}", input);
     println!("output: {}", output);
+
+    let expected = Array3::from_shape_vec((1, 2, 7), 
+        [0_f32, 1., 2., 3., 4., 5., 6.,
+        0_f32, 2., 4., 6., 8., 10., 12.].to_vec()).unwrap();
+    let backward = conv_1d.backward(&expected, &input);
+
+    println!("grads:  {}", backward);
 
     panic!("Done");
 
