@@ -100,21 +100,15 @@ impl /* Layer for */ Convolutional1D {
 
         // 1D convolution
         let (out_features, _, kernel_size) = self.kernels.dim();
-        self.kgrads = Array3::zeros((out_features, in_features, kernel_size));
+        self.kgrads = conv1d_with_batch_and_features(
+            forward_input, 
+            delta, 
+            (out_features, in_features, kernel_size), 
+            self.stride
+        );
 
-        // Iterate over loss samples across batch_size dimension
-        for (b, sample) in delta.axis_iter(Axis(0)).enumerate() {
-
-            // Iterate over input kernels across out_features dimension
-            for in_sample in forward_input.axis_iter(Axis(0)) {
-
-                // Iterate over loss sample features across out_features dimension
-                for (in_f, out_feature) in sample.axis_iter(Axis(0)).enumerate() {
-                    let conv = convolve1d(out_feature, in_sample.slice(s![in_f, ..]), self.stride);
-                    self.kgrads.slice_mut(s![b, in_f, ..]).assign(&conv);
-                }
-            }
-        }
+        println!("shape:  {:?}", (out_features, in_features, kernel_size));
+        println!("kgrads: {}", self.kgrads);
 
         // Pad the loss for full convolution to propagate the error signal
         let padded_loss = {
@@ -123,25 +117,12 @@ impl /* Layer for */ Convolutional1D {
             padded
         };
 
-        let mut signal = Array3::zeros(forward_input.dim());
-        for (b, sample) in padded_loss.axis_iter(Axis(0)).enumerate() {
-
-            // Iterate over input kernels across out_features dimension
-            for kernels in self.kernels.axis_iter(Axis(0)) {
-
-                // Iterate over loss sample features across out_features dimension
-                for (in_f, out_feature) in sample.axis_iter(Axis(0)).enumerate() {
-
-                    // Rotate our kernel 180 degrees
-                    let kernel = kernels.slice(s![in_f, ..-1]);
-                    let conv = convolve1d(out_feature, kernel, self.stride);
-                    // Chop off the padding since we wanted to do a full convolution
-                    let conv = conv.slice(s![(kernel_size - 1)..sample_size + kernel_size - 1]);
-                    signal.slice_mut(s![b, in_f, ..]).assign(&conv);
-                }
-            }
-        }
-        signal
+        conv1d_with_batch_and_features(
+            &padded_loss,
+            &self.kernels.slice(s![.., .., ..-1]).to_owned(), 
+            forward_input.dim(), 
+            self.stride,
+        )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
