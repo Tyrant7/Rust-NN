@@ -1,7 +1,7 @@
 use std::char::from_digit;
 
 use rand::Rng;
-use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis};
+use ndarray::{s, Array1, Array2, Array3, ArrayView1, ArrayView3, Axis};
 
 use super::{Layer, Parameter};
 
@@ -76,21 +76,13 @@ impl /* Layer for */ Convolutional1D {
         // 1D convolution
         let (out_features, _, kernel_size) = self.kernels.dim();
         let output_size = ((sample_size - kernel_size + (2 * self.padding)) / self.stride) + 1;
-        let mut output = Array3::zeros((batch_size, out_features, output_size));
+        let mut output = conv1d_with_batch_and_features(
+            &padded_input, 
+            &self.kernels, 
+            (batch_size, out_features, output_size), 
+            self.stride
+        );
 
-        // Iterate over input samples across batch_size dimension
-        for (b, sample) in padded_input.axis_iter(Axis(0)).enumerate() {
-
-            // Iterate over input kernels across out_features dimension
-            for kernels in self.kernels.axis_iter(Axis(0)) {
-
-                // Iterate over input sample features across in_features dimension
-                for (in_f, in_feature) in sample.axis_iter(Axis(0)).enumerate() {
-                    let conv = convolve1d(in_feature, kernels.slice(s![in_f, ..]), self.stride);
-                    output.slice_mut(s![b, in_f, ..]).assign(&conv);
-                }
-            }
-        }
         // Apply bias to the second dimension (features)
         if let Some(b) = &self.bias {
             output += &b.view()
@@ -156,6 +148,31 @@ impl /* Layer for */ Convolutional1D {
         // TODO
         unimplemented!();
     }
+}
+
+/// Dimensions:
+/// input:   (batch_size, in_features, width)
+/// kernels: (out_features, in_features, width)
+fn conv1d_with_batch_and_features(input: &Array3<f32>, kernels: &Array3<f32>, output_dim: (usize, usize, usize), stride: usize) -> Array3<f32> {
+    let mut output = Array3::zeros(output_dim);
+
+    // (batch_size, in_features, width) -> (in_features, width)[] for the input
+    for (b, batch) in input.axis_iter(Axis(0)).enumerate() {
+
+        // (out_features, in_features, width) -> (in_features, width)[] for the kernels
+        for kernel in kernels.axis_iter(Axis(0)) {
+
+            // (in_features, width) -> (width)[] for input samples within each batch
+            // We'll use the same index to index our kernels as we do to assign our input features
+            for (in_f, in_feature) in batch.axis_iter(Axis(0)).enumerate() {
+
+                // Convolve each input feature with each kernel
+                let conv = convolve1d(in_feature, kernel.slice(s![in_f, ..]), stride);
+                output.slice_mut(s![b, in_f, ..]).assign(&conv);
+            }
+        }
+    }
+    output
 }
 
 fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
