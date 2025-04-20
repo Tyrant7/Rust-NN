@@ -39,9 +39,9 @@ fn main() {
     println!("output: {}", output);
 
     let expected = Array3::from_shape_vec((1, 2, 7), 
-        [0_f32, 1., 2., 3., 4., 5., 6.,
-        0_f32, 2., 4., 6., 8., 10., 12.].to_vec()).unwrap();
-    let backward = conv_1d.backward(&expected, &input);
+        [3_f32, 3., 3., 3., 3., 3., 3.,
+        0_f32, 0., 0., 0., 0., 0., 0.].to_vec()).unwrap();
+    let backward = conv_1d.backward(&error, &input);
 
     println!("grads:  {}", backward);
 
