@@ -86,7 +86,7 @@ impl /* Layer for */ Convolutional1D {
                     let conv = convolve1d(input_slice, kernel_slice, self.stride);
 
                     output
-                        .slice_mut(s![b, in_f, ..])
+                        .slice_mut(s![b, out_f, ..])
                         .scaled_add(1., &conv);
                 }
             }
