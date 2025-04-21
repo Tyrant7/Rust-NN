@@ -29,3 +29,6 @@ pub mod relu;
 pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;
+
+#[cfg(test)]
+mod tests;

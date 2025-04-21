@@ -1,9 +1,6 @@
 use layers::Convolutional1D;
 use ndarray::{Array2, Array3};
 
-// 
-mod tests;
-
 //
 mod model;
 use model::Model;
