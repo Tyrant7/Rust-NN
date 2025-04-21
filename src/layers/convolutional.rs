@@ -96,33 +96,49 @@ impl /* Layer for */ Convolutional1D {
     }
 
     pub fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
-        let (batch_size, in_features, sample_size) = forward_input.dim();
-
-        // 1D convolution
+        let (batch_size, in_features, width) = forward_input.dim();
         let (out_features, _, kernel_size) = self.kernels.dim();
-        self.kgrads = conv1d_with_batch_and_features(
-            forward_input, 
-            delta, 
-            (out_features, in_features, kernel_size), 
-            self.stride
-        );
 
-        println!("shape:  {:?}", (out_features, in_features, kernel_size));
+        // Compute kernel gradients
+        self.kgrads = Array3::zeros(self.kernels.dim());
+        for b in 0..batch_size {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
+                    // Align error slice with input slice
+                    let input_slice = forward_input.slice(s![b, in_f, ..]);
+                    let error_slice = delta.slice(s![b, out_f, ..]);
+
+                    // 1D convolution
+                    let grad = convolve1d(input_slice, error_slice, self.stride);
+                    self.kgrads
+                        .slice_mut(s![out_f, in_f, ..])
+                        .scaled_add(1., &grad);
+                }
+            }
+        }
+
+        println!("kernels:{:?}", self.kernels);
         println!("kgrads: {}", self.kgrads);
 
-        // Pad the loss for full convolution to propagate the error signal
-        let padded_loss = {
-            let mut padded = Array3::zeros((batch_size, in_features, sample_size + (kernel_size - 1) * 2));
-            padded.slice_mut(s![0..batch_size, 0..in_features, (kernel_size - 1)..sample_size + kernel_size - 1]).assign(delta);
-            padded
-        };
+        // Compute loss signal for backpropagation
+        let mut error_signal = Array3::zeros(forward_input.dim());
+        for b in 0..batch_size {
+            for in_f in 0..in_features {
+                for out_f in 0..out_features {
+                    let delta_slice = delta.slice(s![b, out_f, ..]);
 
-        conv1d_with_batch_and_features(
-            &padded_loss,
-            &self.kernels.slice(s![.., .., ..-1]).to_owned(), 
-            forward_input.dim(), 
-            self.stride,
-        )
+                    // Flip over width dimension (180 rotation)
+                    let kernel_slice = self.kernels.slice(s![out_f, in_f, ..;-1]);
+
+                    let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
+                    let conv = convolve1d(padded.view(), kernel_slice, self.stride);
+                    error_signal
+                        .slice_mut(s![b, in_f, ..])
+                        .scaled_add(1., &conv);
+                }
+            }
+        }
+        error_signal
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
@@ -154,6 +170,16 @@ fn conv1d_with_batch_and_features(input: &Array3<f32>, kernels: &Array3<f32>, ou
         }
     }
     output
+}
+
+fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
+    assert!(padding > 0);
+
+    let mut padded = Array1::zeros(input.dim() + padding * 2);
+    padded
+        .slice_mut(s![padding..input.dim() + padding])
+        .assign(input);
+    padded
 }
 
 fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
