@@ -32,6 +32,6 @@
 -   Additional sample problems, harder than XOR
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
--   Helper libraries for things like Softmax
+-   Helper modules for things like Softmax
 -   Helpers for dataloading and data management
 -   CPU multithreading
