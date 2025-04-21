@@ -35,8 +35,9 @@ fn main() {
     println!("input:  {}", input);
     println!("output: {}", output);
 
-    let error = Array3::from_shape_vec((1, 2, 6), 
+    let error = Array3::from_shape_vec((1, 3, 6), 
         [3_f32, 3., 3., 3., 3., 3.,
+        0_f32, 0., 0., 0., 0., 0.,
         0_f32, 0., 0., 0., 0., 0.].to_vec()).unwrap();
     let backward = conv_1d.backward(&error, &input);
 

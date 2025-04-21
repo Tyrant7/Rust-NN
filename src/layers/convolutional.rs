@@ -108,6 +108,8 @@ impl /* Layer for */ Convolutional1D {
         let (batch_size, in_features, width) = forward_input.dim();
         let (out_features, _, kernel_size) = self.kernels.dim();
 
+        println!("Starting backward!");
+
         // Compute kernel gradients
         self.kgrads = Array3::zeros(self.kernels.dim());
         for b in 0..batch_size {
