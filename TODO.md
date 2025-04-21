@@ -2,7 +2,11 @@
 
 ## Currently working on:
 
--   Finish 1D convolutional layers (backprop)
+-   Finish 1D convolutional layers
+    -   Unit tests
+-   Stateless layers
+    -   "Parameters" object which holds all parameters and gradients for a given model, then the network indexes
+        into params object to retrieve specific parameters for each layer and feeds it as an input parmeter
 
 ## Next up:
 

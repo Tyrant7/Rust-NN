@@ -1,5 +1,3 @@
-use std::char::from_digit;
-
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, ArrayView3, Axis};
 
@@ -105,10 +103,8 @@ impl /* Layer for */ Convolutional1D {
     }
 
     pub fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
-        let (batch_size, in_features, width) = forward_input.dim();
-        let (out_features, _, kernel_size) = self.kernels.dim();
-
-        println!("Starting backward!");
+        let (batch_size, in_features, _) = forward_input.dim();
+        let (out_features, _, _) = self.kernels.dim();
 
         // Compute kernel gradients
         self.kgrads = Array3::zeros(self.kernels.dim());
@@ -127,9 +123,6 @@ impl /* Layer for */ Convolutional1D {
                 }
             }
         }
-
-        println!("kernels:{:?}", self.kernels);
-        println!("kgrads: {}", self.kgrads);
 
         // Compute loss signal for backpropagation
         let mut error_signal = Array3::zeros(forward_input.dim());
