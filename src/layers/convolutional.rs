@@ -78,8 +78,8 @@ impl /* Layer for */ Convolutional1D {
         let output_width = ((width - kernel_size + (2 * self.padding)) / self.stride) + 1;
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
         for b in 0..batch_size {
-            for in_f in 0..in_features {
-                for out_f in 0..out_features {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, ..]);
                     let kernel_slice = self.kernels.slice(s![out_f, in_f, ..]);
 
@@ -132,8 +132,8 @@ impl /* Layer for */ Convolutional1D {
         // Compute loss signal for backpropagation
         let mut error_signal = Array3::zeros(forward_input.dim());
         for b in 0..batch_size {
-            for in_f in 0..in_features {
-                for out_f in 0..out_features {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
                     let delta_slice = delta.slice(s![b, out_f, ..]);
 
                     // Flip over width dimension (180 rotation)
