@@ -1,14 +1,17 @@
-use ndarray::{Array2, ArrayBase, Dimension, Ix0, OwnedRepr, ShapeBuilder};
+use ndarray::{ArrayBase, Dimension, OwnedRepr};
 
 // TODO: We need some way to support layers that take different input types
 // -> Probably use an enum
 
-pub trait Layer: std::fmt::Debug {
-    fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32>;
-    fn backward(&mut self, input: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32>;
+pub trait Layer<D>: std::fmt::Debug 
+where 
+    D: Dimension
+{
+    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, D>, train: bool) -> ArrayBase<OwnedRepr<f32>, D>;
+    fn backward(&mut self, input: &ArrayBase<OwnedRepr<f32>, D>, forward_input: &ArrayBase<OwnedRepr<f32>, D>) -> ArrayBase<OwnedRepr<f32>, D>;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup<Ix0>> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup<D>> { Vec::new() }
 }
 
 #[derive(Debug)]

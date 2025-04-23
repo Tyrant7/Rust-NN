@@ -29,9 +29,9 @@ impl Linear {
     }
 }
 
-impl Layer for Linear {
+impl Layer<Ix2> for Linear {
     fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
-        input.dot(&self.weights.t()) + &self.bias
+        input.dot(&self.weights.values.t()) + &self.bias.values
     }
 
     // Here, we'll be fed the delta after the activation derivative has been applied,
@@ -39,20 +39,14 @@ impl Layer for Linear {
     fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
 
         // Accumulate gradients in training
-        self.wgrads += &forward_input.t().dot(delta).t();
-        self.bgrads += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
+        self.weights.gradients += &forward_input.t().dot(delta).t();
+        self.bias.gradients    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer
-        delta.dot(&self.weights)
+        delta.dot(&self.weights.values)
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup> {
-        vec![ParameterGroup {
-            value: &mut self.weights,
-            gradient: &mut self.wgrads,
-        }, ParameterGroup {
-            value: &mut self.bias,
-            gradient: &mut self.bgrads,
-        }]
+    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup<Ix2>> {
+        vec![&mut self.weights, &mut self.bias]
     }
 }
