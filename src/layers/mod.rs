@@ -1,4 +1,4 @@
-use ndarray::{ArrayBase, Dimension, OwnedRepr};
+use ndarray::{ArrayBase, Dimension, Ix1, Ix2, Ix3, OwnedRepr};
 
 // TODO: We need some way to support layers that take different input types
 // -> Probably use an enum
@@ -11,7 +11,7 @@ where
     fn backward(&mut self, input: &ArrayBase<OwnedRepr<f32>, D>, forward_input: &ArrayBase<OwnedRepr<f32>, D>) -> ArrayBase<OwnedRepr<f32>, D>;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup<D>> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
 }
 
 #[derive(Debug)]
@@ -31,6 +31,12 @@ impl<D: Dimension> ParameterGroup<D> {
             gradients: ArrayBase::from_elem(raw_dim, 0.), 
         }
     }
+}
+
+pub enum LearnableParameter<'a> {
+    Param1D(&'a mut ParameterGroup<Ix1>),
+    Param2D(&'a mut ParameterGroup<Ix2>),
+    Param3D(&'a mut ParameterGroup<Ix3>),
 }
 
 pub mod linear;

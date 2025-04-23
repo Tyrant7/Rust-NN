@@ -1,6 +1,8 @@
 use rand::Rng;
 use ndarray::{Array2, Axis, Ix2};
 
+use crate::layers::LearnableParameter;
+
 use super::{Layer, ParameterGroup};
 
 #[derive(Debug)]
@@ -46,7 +48,10 @@ impl Layer<Ix2> for Linear {
         delta.dot(&self.weights.values)
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup<Ix2>> {
-        vec![&mut self.weights, &mut self.bias]
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
+        vec![
+            LearnableParameter::Param2D(&mut self.weights), 
+            LearnableParameter::Param2D(&mut self.bias)
+        ]
     }
 }
