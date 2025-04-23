@@ -1,15 +1,13 @@
 use rand::Rng;
-use ndarray::{s, Array1, Array2, Array3, ArrayView1, ArrayView3, Axis};
+use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
 
 use super::{Layer, ParameterGroup};
 
+#[derive(Debug)]
 pub struct Convolutional1D
 {
-    kernels: Array3<f32>,
-    bias: Option<Array1<f32>>,
-
-    kgrads: Array3<f32>,
-    bgrads: Option<Array1<f32>>,
+    kernels: ParameterGroup<Ix3>,
+    bias: Option<ParameterGroup<Ix1>>,
 
     stride: usize,
     padding: usize,
@@ -42,21 +40,23 @@ impl Convolutional1D {
         stride: usize, 
         padding: usize,
     ) -> Self {
-        let kgrads = Array3::zeros(kernels.raw_dim());
-        let bgrads = bias.as_ref().map(|b| Array1::zeros(b.raw_dim()));
+        let kernels = ParameterGroup::new(kernels);
+        let bias = match bias {
+            Some(b) => Some(ParameterGroup::new(b)),
+            None => None
+        };
+
         Convolutional1D { 
             kernels, 
             bias, 
-            kgrads, 
-            bgrads, 
             stride, 
             padding 
         }
     }
 }
 
-impl /* Layer for */ Convolutional1D {
-    pub fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
+impl Layer<Ix3> for Convolutional1D {
+    fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
 
         // Pad the input

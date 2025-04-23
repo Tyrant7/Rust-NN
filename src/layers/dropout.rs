@@ -1,5 +1,5 @@
 use rand::{rngs::SmallRng, Rng, SeedableRng};
-use ndarray::Array2;
+use ndarray::{Array2, Ix2};
 
 use super::Layer;
 
@@ -20,7 +20,7 @@ impl Dropout {
     }
 }
 
-impl Layer for Dropout {
+impl Layer<Ix2> for Dropout {
     fn forward(&mut self, input: &Array2<f32>, train: bool) -> Array2<f32> {
         // Dropout layers are disable outside of train mode
         if !train {

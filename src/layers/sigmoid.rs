@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use ndarray::{Array2, Ix2};
 use super::Layer;
 
 #[derive(Debug)]
@@ -10,7 +10,7 @@ impl Sigmoid {
     }
 }
 
-impl Layer for Sigmoid {
+impl Layer<Ix2> for Sigmoid {
     fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         Sigmoid::sigmoid(input)
     }

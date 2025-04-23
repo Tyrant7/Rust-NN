@@ -1,10 +1,10 @@
-use ndarray::Array2;
+use ndarray::{Array2, Ix2};
 use super::Layer;
 
 #[derive(Debug)]
 pub struct ReLU;
 
-impl Layer for ReLU {
+impl Layer<Ix2> for ReLU {
     fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         input.clone().mapv_into(|x| x.max(0.))
     }
