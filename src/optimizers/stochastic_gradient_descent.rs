@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayBase};
+use ndarray::{ArrayBase, IxDyn, OwnedRepr};
 
 use crate::layers::{LearnableParameter, ParameterGroup};
 use super::Optimizer;
@@ -7,12 +7,12 @@ use super::Optimizer;
 pub struct SGD {
     learning_rate: f32,
     momentum: f32,
-    velocities: Vec<Array2<f32>>,
+    velocities: Vec<ArrayBase<OwnedRepr<f32>, IxDyn>>,
 }
 
 impl SGD {
     pub fn new(parameters: &[LearnableParameter], learning_rate: f32, momentum: f32) -> SGD {
-        let velocities = parameters.iter().map(|p| p.clone_shape());
+        let velocities = parameters.iter().map(|p| p.clone_shape()).collect();
         SGD {
             learning_rate,
             momentum,

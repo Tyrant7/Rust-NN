@@ -1,4 +1,4 @@
-use ndarray::{ArrayBase, Dimension, Ix1, Ix2, Ix3, OwnedRepr};
+use ndarray::{ArrayBase, Dimension, Ix1, Ix2, Ix3, IxDyn, IxDynImpl, OwnedRepr};
 
 // TODO: We need some way to support layers that take different input types
 // -> Probably use an enum
