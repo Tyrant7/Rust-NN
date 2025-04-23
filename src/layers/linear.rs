@@ -1,14 +1,12 @@
 use rand::Rng;
-use ndarray::{Array2, Axis};
+use ndarray::{Array2, Axis, Ix2};
 
-use super::{Layer, Parameter};
+use super::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Linear {
-    weights: Array2<f32>,
-    bias: Array2<f32>,
-    wgrads: Array2<f32>,
-    bgrads: Array2<f32>,
+    weights: ParameterGroup<Ix2>,
+    bias: ParameterGroup<Ix2>,
 }
 
 impl Linear {
@@ -17,15 +15,16 @@ impl Linear {
         outputs: usize, 
     ) -> Linear {
         let mut rng = rand::rng();
-        let weights = Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.));
-        let bias = Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.));
-        let wgrads = Array2::zeros(weights.raw_dim());
-        let bgrads = Array2::zeros(bias.raw_dim());
+
+        let weights =         ParameterGroup::new(
+            Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.))
+        );
+        let bias = ParameterGroup::new(
+            Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.))
+        );
         Linear {
             weights,
             bias,
-            wgrads,
-            bgrads,
         }
     }
 }
@@ -47,11 +46,11 @@ impl Layer for Linear {
         delta.dot(&self.weights)
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
-        vec![Parameter {
+    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup> {
+        vec![ParameterGroup {
             value: &mut self.weights,
             gradient: &mut self.wgrads,
-        }, Parameter {
+        }, ParameterGroup {
             value: &mut self.bias,
             gradient: &mut self.bgrads,
         }]

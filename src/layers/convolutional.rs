@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, ArrayView3, Axis};
 
-use super::{Layer, Parameter};
+use super::{Layer, ParameterGroup};
 
 pub struct Convolutional1D
 {
@@ -145,7 +145,7 @@ impl /* Layer for */ Convolutional1D {
         error_signal
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<Parameter> {
+    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup> {
         // TODO
         unimplemented!();
     }

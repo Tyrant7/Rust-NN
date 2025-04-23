@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use ndarray::{Array2, ArrayBase, Dimension, Ix0, OwnedRepr, ShapeBuilder};
 
 // TODO: We need some way to support layers that take different input types
 // -> Probably use an enum
@@ -8,12 +8,26 @@ pub trait Layer: std::fmt::Debug {
     fn backward(&mut self, input: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32>;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<Parameter> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup<Ix0>> { Vec::new() }
 }
 
-pub struct Parameter<'a> {
-    pub value: &'a mut Array2<f32>,
-    pub gradient: &'a mut Array2<f32>,
+#[derive(Debug)]
+pub struct ParameterGroup<D>
+where
+    D: Dimension,
+{
+    pub values: ArrayBase<OwnedRepr<f32>, D>,
+    pub gradients: ArrayBase<OwnedRepr<f32>, D>,
+}
+
+impl<D: Dimension> ParameterGroup<D> {
+    pub fn new(initial_values: ArrayBase<OwnedRepr<f32>, D>) -> Self {
+        let raw_dim = initial_values.raw_dim();
+        ParameterGroup { 
+            values: initial_values, 
+            gradients: ArrayBase::from_elem(raw_dim, 0.), 
+        }
+    }
 }
 
 pub mod linear;
