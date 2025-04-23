@@ -1,10 +1,10 @@
-use ndarray::Array2;
+use ndarray::{Array2, Dimension};
 
 use crate::layers::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Model {
-    layers: Vec<Box<dyn Layer>>,
+    layers: Vec<Box<dyn Layer<D: Dimension>>>,
     forward_inputs: Vec<Option<Array2<f32>>>,
     pub train: bool,
 }

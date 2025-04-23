@@ -123,6 +123,8 @@ impl Layer<Ix3> for Convolutional1D {
             }
         }
 
+        // TODO: Compute bias gradients
+
         // Compute loss signal for backpropagation
         let mut error_signal = Array3::zeros(forward_input.dim());
         for b in 0..batch_size {
@@ -131,7 +133,7 @@ impl Layer<Ix3> for Convolutional1D {
                     let delta_slice = delta.slice(s![b, out_f, ..]);
 
                     // Flip over width dimension (180 rotation)
-                    let kernel_slice = self.kernels.slice(s![out_f, in_f, ..;-1]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
 
                     let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
                     let conv = convolve1d(padded.view(), kernel_slice, self.stride);
@@ -144,9 +146,12 @@ impl Layer<Ix3> for Convolutional1D {
         error_signal
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup> {
-        // TODO
-        unimplemented!();
+    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup<Ix3>> {
+        let params = vec![&mut self.kernels];
+        if let Some(bias) = self.bias {
+            params.push(&mut self.bias.unwrap());
+        }
+        params
     }
 }
 
