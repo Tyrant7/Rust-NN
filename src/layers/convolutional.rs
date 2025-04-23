@@ -72,14 +72,14 @@ impl Layer<Ix3> for Convolutional1D {
         };
 
         // 1D convolution
-        let (out_features, _, kernel_size) = self.kernels.dim();
+        let (out_features, _, kernel_size) = self.kernels.values.dim();
         let output_width = ((width - kernel_size + (2 * self.padding)) / self.stride) + 1;
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, ..]);
-                    let kernel_slice = self.kernels.slice(s![out_f, in_f, ..]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
 
                     let conv = convolve1d(input_slice, kernel_slice, self.stride);
 
@@ -102,12 +102,11 @@ impl Layer<Ix3> for Convolutional1D {
         output
     }
 
-    pub fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
+    fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
         let (batch_size, in_features, _) = forward_input.dim();
-        let (out_features, _, _) = self.kernels.dim();
+        let (out_features, _, _) = self.kernels.values.dim();
 
         // Compute kernel gradients
-        self.kgrads = Array3::zeros(self.kernels.dim());
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
@@ -117,7 +116,7 @@ impl Layer<Ix3> for Convolutional1D {
 
                     // 1D convolution
                     let grad = convolve1d(input_slice, error_slice, self.stride);
-                    self.kgrads
+                    self.kernels.gradients
                         .slice_mut(s![out_f, in_f, ..])
                         .scaled_add(1., &grad);
                 }
