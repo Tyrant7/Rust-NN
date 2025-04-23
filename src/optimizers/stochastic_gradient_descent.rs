@@ -1,6 +1,6 @@
-use ndarray::Array2;
+use ndarray::{Array2, ArrayBase};
 
-use crate::layers::ParameterGroup;
+use crate::layers::{LearnableParameter, ParameterGroup};
 use super::Optimizer;
 
 #[allow(clippy::upper_case_acronyms)]
@@ -11,8 +11,8 @@ pub struct SGD {
 }
 
 impl SGD {
-    pub fn new(parameters: &[ParameterGroup], learning_rate: f32, momentum: f32) -> SGD {
-        let velocities = parameters.iter().map(|p| Array2::zeros(p.value.raw_dim())).collect();
+    pub fn new(parameters: &[LearnableParameter], learning_rate: f32, momentum: f32) -> SGD {
+        let velocities = parameters.iter().map(|p| p.clone_shape());
         SGD {
             learning_rate,
             momentum,
@@ -22,7 +22,7 @@ impl SGD {
 }
 
 impl Optimizer for SGD {
-    fn step(&mut self, parameters: &mut [ParameterGroup], n_samples: usize) {
+    fn step(&mut self, parameters: &mut [LearnableParameter], n_samples: usize) {
         for (i, param) in parameters.iter_mut().enumerate() {
             let grad = &*param.gradient / n_samples as f32;
             let update = self.learning_rate * grad + self.momentum * &self.velocities[i];

@@ -1,6 +1,6 @@
 use ndarray::{Array2, Dimension};
 
-use crate::layers::{Layer, ParameterGroup};
+use crate::layers::{Layer, LearnableParameter};
 
 #[derive(Debug)]
 pub struct Model {
@@ -38,7 +38,7 @@ impl Model {
         }
     }
 
-    pub fn collect_parameters(&mut self) -> Vec<ParameterGroup> {
+    pub fn collect_parameters(&mut self) -> Vec<LearnableParameter> {
         let mut parameters = Vec::new();
         for layer in self.layers.iter_mut() {
             parameters.extend(layer.get_learnable_parameters());

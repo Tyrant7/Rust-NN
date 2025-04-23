@@ -39,6 +39,22 @@ pub enum LearnableParameter<'a> {
     Param3D(&'a mut ParameterGroup<Ix3>),
 }
 
+macro_rules! match_param {
+    ($self:expr, |$p:ident| $body:expr) => {
+        match $self {
+            LearnableParameter::Param1D($p) =>$body,
+            LearnableParameter::Param2D($p) => $body,
+            LearnableParameter::Param3D($p) => $body,
+        }
+    };
+}
+
+impl<'a> LearnableParameter<'a> {
+    pub fn clone_shape<D: Dimension>(&self) -> ArrayBase<OwnedRepr<f32>, D> {
+        match_param!(self, |p| ArrayBase::zeros(p.values.raw_dim()).into_dimensionality::<D>().unwrap())
+    }
+}
+
 pub mod linear;
 pub use linear::Linear;
 
