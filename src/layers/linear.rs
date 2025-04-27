@@ -34,7 +34,7 @@ impl Linear {
 impl Layer for Linear {
     fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
         Tensor::T2D(
-            input.into_array2d().dot(&self.weights.values.t()) + &self.bias.values
+            input.as_array2d().dot(&self.weights.values.t()) + &self.bias.values
         )
     }
 
@@ -42,10 +42,10 @@ impl Layer for Linear {
     // since the activation functions will handle that portion themselves
     fn backward(&mut self, delta: &Tensor, forward_input: &Tensor) -> Tensor {
 
-        let delta = delta.into_array2d();
+        let delta = delta.as_array2d();
 
         // Accumulate gradients in training
-        self.weights.gradients += &forward_input.into_array2d().t().dot(delta).t();
+        self.weights.gradients += &forward_input.as_array2d().t().dot(delta).t();
         self.bias.gradients    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer

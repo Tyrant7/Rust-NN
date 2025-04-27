@@ -57,7 +57,7 @@ impl Convolutional1D {
 
 impl Layer for Convolutional1D {
     fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
-        let input = input.into_array3d();
+        let input = input.as_array3d();
 
         let (batch_size, in_features, width) = input.dim();
 
@@ -107,8 +107,8 @@ impl Layer for Convolutional1D {
     }
 
     fn backward(&mut self, delta: &Tensor, forward_input: &Tensor) -> Tensor {
-        let delta = delta.into_array3d();
-        let forward_input = forward_input.into_array3d();
+        let delta = delta.as_array3d();
+        let forward_input = forward_input.as_array3d();
 
         let (batch_size, in_features, _) = forward_input.dim();
         let (out_features, _, _) = self.kernels.values.dim();

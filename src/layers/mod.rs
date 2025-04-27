@@ -1,3 +1,5 @@
+use std::ops;
+
 use ndarray::{Array2, Array3, ArrayBase, Dimension, Ix1, Ix2, Ix3, OwnedRepr};
 
 pub trait Layer: std::fmt::Debug
@@ -16,17 +18,38 @@ pub enum Tensor {
 }
 
 impl Tensor {
-    fn into_array2d(&self) -> &Array2<f32> {
+    fn as_array2d(&self) -> &Array2<f32> {
         match self {
             Self::T2D(data) => data,
             _ => panic!("Shape error: expected T2D but got {:?}", self)
         }
     }
 
-    fn into_array3d(&self) -> &Array3<f32> {
+    fn as_array3d(&self) -> &Array3<f32> {
         match self {
             Self::T3D(data) => data,
             _ => panic!("Shape error: expected T3D but got {:?}", self)
+        }
+    }
+
+    fn apply<F>(&self, mut f: F) -> Self
+    where 
+        F: FnMut(f32) -> f32
+    {
+        match self {
+            Self::T2D(data) => Self::T2D(data.clone().mapv_into(|x| f(x))),
+            Self::T3D(data) => Self::T3D(data.clone().mapv_into(|x| f(x))),
+        }
+    }
+}
+
+impl std::ops::Mul<&Tensor> for Tensor {
+    type Output = Self;
+
+    fn mul(self, rhs: &Self) -> Self {
+        match self {
+            Self::T2D(data) => Self::T2D(data + rhs.as_array2d()),
+            Self::T3D(data) => Self::T3D(data + rhs.as_array3d()),
         }
     }
 }
