@@ -1,17 +1,34 @@
-use ndarray::{ArrayBase, Dimension, Ix1, Ix2, Ix3, IxDyn, IxDynImpl, OwnedRepr};
+use ndarray::{Array2, Array3, ArrayBase, Dimension, Ix1, Ix2, Ix3, OwnedRepr};
 
-// TODO: We need some way to support layers that take different input types
-// -> Probably use an enum
-
-pub trait Layer<D>: std::fmt::Debug 
-where 
-    D: Dimension
+pub trait Layer: std::fmt::Debug
 {
-    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, D>, train: bool) -> ArrayBase<OwnedRepr<f32>, D>;
-    fn backward(&mut self, input: &ArrayBase<OwnedRepr<f32>, D>, forward_input: &ArrayBase<OwnedRepr<f32>, D>) -> ArrayBase<OwnedRepr<f32>, D>;
+    fn forward(&mut self, input: &Tensor, train: bool) -> Tensor;
+    fn backward(&mut self, input: &Tensor, forward_input: &Tensor) -> Tensor;
 
     // Not all layers have learnable parameters
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
+}
+
+#[derive(Debug)]
+pub enum Tensor {
+    T2D(Array2<f32>),
+    T3D(Array3<f32>),
+}
+
+impl Tensor {
+    fn into_array2d(self) -> Array2<f32> {
+        match self {
+            Self::T2D(data) => data,
+            _ => panic!("Shape error: expected T2D but got {:?}", self)
+        }
+    }
+
+    fn into_array3d(self) -> Array3<f32> {
+        match self {
+            Self::T3D(data) => data,
+            _ => panic!("Shape error: expected T3D but got {:?}", self)
+        }
+    }
 }
 
 #[derive(Debug)]
