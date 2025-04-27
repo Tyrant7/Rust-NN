@@ -5,6 +5,9 @@ use ndarray::{Array2, Array3};
 mod model;
 use model::Model;
 
+mod tensor;
+use tensor::Tensor;
+
 //
 mod layers;
 use layers::Linear;
