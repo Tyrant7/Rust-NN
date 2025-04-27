@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
 
-use super::{Layer, LearnableParameter, ParameterGroup};
+use super::{Layer, LearnableParameter, ParameterGroup, Tensor};
 
 #[derive(Debug)]
 pub struct Convolutional1D
@@ -55,8 +55,10 @@ impl Convolutional1D {
     }
 }
 
-impl Layer<Ix3> for Convolutional1D {
-    fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
+impl Layer for Convolutional1D {
+    fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
+        let input = input.into_array3d();
+
         let (batch_size, in_features, width) = input.dim();
 
         // Pad the input
@@ -99,10 +101,15 @@ impl Layer<Ix3> for Convolutional1D {
                 .unwrap();
         }
 
-        output
+        Tensor::T3D(
+            output
+        )
     }
 
-    fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
+    fn backward(&mut self, delta: &Tensor, forward_input: &Tensor) -> Tensor {
+        let delta = delta.into_array3d();
+        let forward_input = forward_input.into_array3d();
+
         let (batch_size, in_features, _) = forward_input.dim();
         let (out_features, _, _) = self.kernels.values.dim();
 
@@ -143,7 +150,10 @@ impl Layer<Ix3> for Convolutional1D {
                 }
             }
         }
-        error_signal
+
+        Tensor::T3D(
+            error_signal
+        )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {

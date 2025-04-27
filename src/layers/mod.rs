@@ -16,14 +16,14 @@ pub enum Tensor {
 }
 
 impl Tensor {
-    fn into_array2d(self) -> Array2<f32> {
+    fn into_array2d(&self) -> &Array2<f32> {
         match self {
             Self::T2D(data) => data,
             _ => panic!("Shape error: expected T2D but got {:?}", self)
         }
     }
 
-    fn into_array3d(self) -> Array3<f32> {
+    fn into_array3d(&self) -> &Array3<f32> {
         match self {
             Self::T3D(data) => data,
             _ => panic!("Shape error: expected T3D but got {:?}", self)

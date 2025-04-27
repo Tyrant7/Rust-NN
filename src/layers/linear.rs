@@ -3,7 +3,7 @@ use ndarray::{Array2, Axis, Ix2};
 
 use crate::layers::LearnableParameter;
 
-use super::{Layer, ParameterGroup};
+use super::{Layer, ParameterGroup, Tensor};
 
 #[derive(Debug)]
 pub struct Linear {
@@ -31,21 +31,27 @@ impl Linear {
     }
 }
 
-impl Layer<Ix2> for Linear {
-    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
-        input.dot(&self.weights.values.t()) + &self.bias.values
+impl Layer for Linear {
+    fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
+        Tensor::T2D(
+            input.into_array2d().dot(&self.weights.values.t()) + &self.bias.values
+        )
     }
 
     // Here, we'll be fed the delta after the activation derivative has been applied,
     // since the activation functions will handle that portion themselves
-    fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
+    fn backward(&mut self, delta: &Tensor, forward_input: &Tensor) -> Tensor {
+
+        let delta = delta.into_array2d();
 
         // Accumulate gradients in training
-        self.weights.gradients += &forward_input.t().dot(delta).t();
+        self.weights.gradients += &forward_input.into_array2d().t().dot(delta).t();
         self.bias.gradients    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer
-        delta.dot(&self.weights.values)
+        Tensor::T2D(
+            delta.dot(&self.weights.values)
+        )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
