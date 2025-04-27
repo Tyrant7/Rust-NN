@@ -11,7 +11,7 @@ pub trait Layer: std::fmt::Debug
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Tensor {
     T2D(Array2<f32>),
     T3D(Array3<f32>),
@@ -54,6 +54,28 @@ impl std::ops::Mul<&Tensor> for Tensor {
     }
 }
 
+impl std::ops::Mul<Tensor> for &Tensor {
+    type Output = Tensor;
+
+    fn mul(self, rhs: Tensor) -> Tensor {
+        match self {
+            Tensor::T2D(data) => Tensor::T2D(data * rhs.as_array2d()),
+            Tensor::T3D(data) => Tensor::T3D(data * rhs.as_array3d()),
+        }
+    }
+}
+
+impl std::ops::Mul<&Tensor> for &Tensor {
+    type Output = Tensor;
+
+    fn mul(self, rhs: &Tensor) -> Tensor {
+        match self {
+            Tensor::T2D(data) => Tensor::T2D(data * rhs.as_array2d()),
+            Tensor::T3D(data) => Tensor::T3D(data * rhs.as_array3d()),
+        }
+    }
+}
+
 impl std::ops::Mul<f32> for Tensor {
     type Output = Self;
 
@@ -61,6 +83,17 @@ impl std::ops::Mul<f32> for Tensor {
         match self {
             Self::T2D(data) => Self::T2D(data * rhs),
             Self::T3D(data) => Self::T3D(data * rhs),
+        }
+    }
+}
+
+impl std::ops::Div<f32> for Tensor {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self {
+        match self {
+            Self::T2D(data) => Self::T2D(data - rhs),
+            Self::T3D(data) => Self::T3D(data - rhs),
         }
     }
 }
