@@ -48,8 +48,19 @@ impl std::ops::Mul<&Tensor> for Tensor {
 
     fn mul(self, rhs: &Self) -> Self {
         match self {
-            Self::T2D(data) => Self::T2D(data + rhs.as_array2d()),
-            Self::T3D(data) => Self::T3D(data + rhs.as_array3d()),
+            Self::T2D(data) => Self::T2D(data * rhs.as_array2d()),
+            Self::T3D(data) => Self::T3D(data * rhs.as_array3d()),
+        }
+    }
+}
+
+impl std::ops::Mul<f32> for Tensor {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        match self {
+            Self::T2D(data) => Self::T2D(data * rhs),
+            Self::T3D(data) => Self::T3D(data * rhs),
         }
     }
 }

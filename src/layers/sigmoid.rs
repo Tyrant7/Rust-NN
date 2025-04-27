@@ -1,23 +1,23 @@
-use ndarray::{Array2, Ix2};
-use super::Layer;
+use super::{Layer, Tensor};
 
 #[derive(Debug)]
 pub struct Sigmoid;
 
 impl Sigmoid {
-    fn sigmoid(input: &Array2<f32>) -> Array2<f32> {
-        input.clone().mapv_into(|x| 1. / (1. + (-x).exp()))
+    fn sigmoid(input: &Tensor) -> Tensor {
+        input.apply(|x| 1. / (1. + (-x).exp()))
     }
 }
 
-impl Layer<Ix2> for Sigmoid {
-    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
+impl Layer for Sigmoid {
+    fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
         Sigmoid::sigmoid(input)
     }
 
-    fn backward(&mut self, error: &Array2<f32>, forward_z: &Array2<f32>) -> Array2<f32> {
+    fn backward(&mut self, error: &Tensor, forward_z: &Tensor) -> Tensor {
         let sig = Sigmoid::sigmoid(forward_z);
-        let activation_derivative = &sig * (1. - &sig);
-        error * activation_derivative
+        let one_minus = sig.apply(|x| 1. - x);
+        let activation_derivative = sig * &one_minus;
+        activation_derivative * error
     }
 }
