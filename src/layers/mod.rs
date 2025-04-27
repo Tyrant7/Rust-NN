@@ -9,6 +9,16 @@ pub trait Layer: std::fmt::Debug
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
 }
 
+
+
+
+
+
+
+// TODO: Fix below
+
+
+
 #[derive(Debug)]
 pub struct ParameterGroup<D>
 where

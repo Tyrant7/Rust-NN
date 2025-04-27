@@ -1,11 +1,9 @@
-use ndarray::{Array2, Dimension};
-
-use crate::layers::{Layer, LearnableParameter};
+use crate::{layers::{Layer, LearnableParameter}, tensor::Tensor};
 
 #[derive(Debug)]
 pub struct Model {
-    layers: Vec<Box<dyn Layer<D: Dimension>>>,
-    forward_inputs: Vec<Option<Array2<f32>>>,
+    layers: Vec<Box<dyn Layer>>,
+    forward_inputs: Vec<Option<Tensor>>,
     pub train: bool,
 }
 
@@ -19,7 +17,7 @@ impl Model {
         }
     }
 
-    pub fn forward(&mut self, mut input: Array2<f32>) -> Array2<f32> {
+    pub fn forward(&mut self, mut input: Tensor) -> Tensor {
         for (layer, layer_input) in self.layers.iter_mut().zip(self.forward_inputs.iter_mut()) {
             if self.train {
                 *layer_input = Some(input.clone());
@@ -29,7 +27,7 @@ impl Model {
         input
     }
 
-    pub fn backward(&mut self, mut error: Array2<f32>) {
+    pub fn backward(&mut self, mut error: Tensor) {
         for (layer, layer_input) in self.layers.iter_mut().zip(self.forward_inputs.iter_mut()).rev() {
             error = match layer_input {
                 Some(forward) => layer.backward(&error, forward),
