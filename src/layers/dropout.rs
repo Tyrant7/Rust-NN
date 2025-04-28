@@ -26,7 +26,7 @@ impl Layer for Dropout {
             return input.clone();
         }
         
-        let mask = input.apply(|_| {
+        let mask = input.map(|_| {
             if self.rng.random::<f32>() > self.rate {
                 1.
             } else {

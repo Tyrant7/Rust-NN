@@ -21,7 +21,7 @@ impl Tensor {
         }
     }
 
-    pub fn apply<F>(&self, mut f: F) -> Self
+    pub fn map<F>(&self, mut f: F) -> Self
     where 
         F: FnMut(f32) -> f32
     {
