@@ -29,6 +29,27 @@ impl Tensor {
         }
     }
 
+    pub fn as_array1d_mut(&mut self) -> &mut Array1<f32> {
+        match self {
+            Self::T1D(data) => data,
+            _ => panic!("Shape error: expected T2D but got {:?}", self)
+        }
+    }
+
+    pub fn as_array2d_mut(&mut self) -> &mut Array2<f32> {
+        match self {
+            Self::T2D(data) => data,
+            _ => panic!("Shape error: expected T2D but got {:?}", self)
+        }
+    }
+
+    pub fn as_array3d_mut(&mut self) -> &mut Array3<f32> {
+        match self {
+            Self::T3D(data) => data,
+            _ => panic!("Shape error: expected T3D but got {:?}", self)
+        }
+    }
+
     pub fn map<F>(&self, mut f: F) -> Self
     where 
         F: FnMut(f32) -> f32
@@ -113,3 +134,21 @@ impl std::ops::Div<f32> for Tensor {
         }
     }
 }
+
+/*
+macro_rules! impl_tensor_methods {
+    ($($method:ident),*) => {
+        impl Tensor {
+            $(
+                pub fn $method(&self) -> f32 {
+                    match self {
+                        Self::T1D(data) => arr.$method(),
+                        Self::T2D(data) => arr.$method(),
+                        Self::T3D(data) => arr.$method(),
+                    }
+                }
+            )*
+        }
+    };
+}
+    */

@@ -1,14 +1,12 @@
 use rand::Rng;
-use ndarray::{Array2, Axis, Ix2};
-
-use crate::layers::LearnableParameter;
+use ndarray::{Array2, Axis};
 
 use super::{Layer, ParameterGroup, Tensor};
 
 #[derive(Debug)]
 pub struct Linear {
-    weights: ParameterGroup<Ix2>,
-    bias: ParameterGroup<Ix2>,
+    weights: ParameterGroup,
+    bias: ParameterGroup,
 }
 
 impl Linear {
@@ -18,11 +16,15 @@ impl Linear {
     ) -> Linear {
         let mut rng = rand::rng();
 
-        let weights =         ParameterGroup::new(
-            Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.))
+        let weights = ParameterGroup::new(
+            Tensor::T2D(
+                Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.))
+            )
         );
         let bias = ParameterGroup::new(
-            Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.))
+            Tensor::T2D(
+                Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.))
+            )
         );
         Linear {
             weights,
@@ -34,7 +36,7 @@ impl Linear {
 impl Layer for Linear {
     fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
         Tensor::T2D(
-            input.as_array2d().dot(&self.weights.values.t()) + &self.bias.values
+            input.as_array2d().dot(&self.weights.values.as_array2d().t()) + self.bias.values.as_array2d()
         )
     }
 
@@ -45,19 +47,19 @@ impl Layer for Linear {
         let delta = delta.as_array2d();
 
         // Accumulate gradients in training
-        self.weights.gradients += &forward_input.as_array2d().t().dot(delta).t();
-        self.bias.gradients    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
+        *self.weights.gradients.as_array2d_mut() += &forward_input.as_array2d().t().dot(delta).t();
+        *self.bias.gradients.as_array2d_mut()    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer
         Tensor::T2D(
-            delta.dot(&self.weights.values)
+            delta.dot(self.weights.values.as_array2d())
         )
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
+    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> {
         vec![
-            LearnableParameter::Param2D(&mut self.weights), 
-            LearnableParameter::Param2D(&mut self.bias)
+            &mut self.weights, 
+            &mut self.bias,
         ]
     }
 }
