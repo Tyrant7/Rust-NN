@@ -1,4 +1,4 @@
-use crate::{layers::{Layer, LearnableParameter}, tensor::Tensor};
+use crate::{layers::Layer, tensor::Tensor};
 
 #[derive(Debug)]
 pub struct Model {

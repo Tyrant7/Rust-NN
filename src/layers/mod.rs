@@ -1,62 +1,26 @@
-use ndarray::{ArrayBase, Dimension, Ix1, Ix2, Ix3, OwnedRepr};
-
 pub trait Layer: std::fmt::Debug
 {
     fn forward(&mut self, input: &Tensor, train: bool) -> Tensor;
     fn backward(&mut self, input: &Tensor, forward_input: &Tensor) -> Tensor;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<ParameterGroup> { Vec::new() }
 }
-
-
-
-
-
-
-
-// TODO: Fix below
-
-
 
 #[derive(Debug)]
-pub struct ParameterGroup<D>
-where
-    D: Dimension,
+pub struct ParameterGroup
 {
-    pub values: ArrayBase<OwnedRepr<f32>, D>,
-    pub gradients: ArrayBase<OwnedRepr<f32>, D>,
+    pub values: Tensor,
+    pub gradients: Tensor,
 }
 
-impl<D: Dimension> ParameterGroup<D> {
-    pub fn new(initial_values: ArrayBase<OwnedRepr<f32>, D>) -> Self {
-        let raw_dim = initial_values.raw_dim();
-        ParameterGroup { 
-            values: initial_values, 
-            gradients: ArrayBase::from_elem(raw_dim, 0.), 
+impl ParameterGroup {
+    pub fn new(initial_values: Tensor) -> Self {
+        let gradients = initial_values.map(|_| 0.);
+        ParameterGroup {
+            values: initial_values,
+            gradients
         }
-    }
-}
-
-pub enum LearnableParameter<'a> {
-    Param1D(&'a mut ParameterGroup<Ix1>),
-    Param2D(&'a mut ParameterGroup<Ix2>),
-    Param3D(&'a mut ParameterGroup<Ix3>),
-}
-
-macro_rules! match_param {
-    ($self:expr, |$p:ident| $body:expr) => {
-        match $self {
-            LearnableParameter::Param1D($p) =>$body,
-            LearnableParameter::Param2D($p) => $body,
-            LearnableParameter::Param3D($p) => $body,
-        }
-    };
-}
-
-impl<'a> LearnableParameter<'a> {
-    pub fn clone_shape<D: Dimension>(&self) -> ArrayBase<OwnedRepr<f32>, D> {
-        match_param!(self, |p| ArrayBase::zeros(p.values.raw_dim()).into_dimensionality::<D>().unwrap())
     }
 }
 

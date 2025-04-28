@@ -1,12 +1,20 @@
-use ndarray::{Array2, Array3};
+use ndarray::{Array1, Array2, Array3};
 
 #[derive(Debug, Clone)]
 pub enum Tensor {
+    T1D(Array1<f32>),
     T2D(Array2<f32>),
     T3D(Array3<f32>),
 }
 
 impl Tensor {
+    pub fn as_array1d(&self) -> &Array1<f32> {
+        match self {
+            Self::T1D(data) => data,
+            _ => panic!("Shape error: expected T2D but got {:?}", self)
+        }
+    }
+
     pub fn as_array2d(&self) -> &Array2<f32> {
         match self {
             Self::T2D(data) => data,
@@ -26,6 +34,7 @@ impl Tensor {
         F: FnMut(f32) -> f32
     {
         match self {
+            Self::T1D(data) => Self::T1D(data.clone().mapv_into(|x| f(x))),
             Self::T2D(data) => Self::T2D(data.clone().mapv_into(|x| f(x))),
             Self::T3D(data) => Self::T3D(data.clone().mapv_into(|x| f(x))),
         }
@@ -39,6 +48,7 @@ macro_rules! impl_tensor_binop {
 
             fn $method(self, rhs: Tensor) -> Tensor {
                 match (self, rhs) {
+                    (Tensor::T1D(a), Tensor::T1D(b)) => Tensor::T1D(a $op b),
                     (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a $op b),
                     (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a $op b),
                     _ => panic!("Shape mismatch"),
@@ -51,6 +61,7 @@ macro_rules! impl_tensor_binop {
 
             fn $method(self, rhs: &Tensor) -> Tensor {
                 match (self, rhs) {
+                    (Tensor::T1D(a), Tensor::T1D(b)) => Tensor::T1D(a $op b),
                     (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a $op b),
                     (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a $op b),
                     _ => panic!("Shape mismatch"),
@@ -63,6 +74,7 @@ macro_rules! impl_tensor_binop {
 
             fn $method(self, rhs: Tensor) -> Tensor {
                 match (self, rhs) {
+                    (Tensor::T1D(a), Tensor::T1D(b)) => Tensor::T1D(a.clone() $op b),
                     (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a.clone() $op b),
                     (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a.clone() $op b),
                     _ => panic!("Shape mismatch"),
@@ -75,6 +87,7 @@ macro_rules! impl_tensor_binop {
 
             fn $method(self, rhs: &Tensor) -> Tensor {
                 match (self, rhs) {
+                    (Tensor::T1D(a), Tensor::T1D(b)) => Tensor::T1D(a.clone() $op b),
                     (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a.clone() $op b),
                     (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a.clone() $op b),
                     _ => panic!("Shape mismatch"),
@@ -94,6 +107,7 @@ impl std::ops::Div<f32> for Tensor {
 
     fn div(self, rhs: f32) -> Self {
         match self {
+            Self::T1D(data) => Self::T1D(data / rhs),
             Self::T2D(data) => Self::T2D(data / rhs),
             Self::T3D(data) => Self::T3D(data / rhs),
         }

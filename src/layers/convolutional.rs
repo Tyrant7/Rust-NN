@@ -1,13 +1,13 @@
 use rand::Rng;
-use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
+use ndarray::{s, Array1, Array3, ArrayView1, Axis};
 
-use super::{Layer, LearnableParameter, ParameterGroup, Tensor};
+use super::{Layer, ParameterGroup, Tensor};
 
 #[derive(Debug)]
 pub struct Convolutional1D
 {
-    kernels: ParameterGroup<Ix3>,
-    bias: Option<ParameterGroup<Ix1>>,
+    kernels: ParameterGroup,
+    bias: Option<ParameterGroup>,
 
     stride: usize,
     padding: usize,
@@ -25,7 +25,7 @@ impl Convolutional1D {
         let mut rng = rand::rng();
 
         // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
-        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
+        let kernels = Tensor::T3D(Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.));
         let bias = match use_bias {
             true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
             false => None,
@@ -35,8 +35,8 @@ impl Convolutional1D {
     }
 
     pub fn new_from_kernel(
-        kernels: Array3<f32>, 
-        bias: Option<Array1<f32>>,
+        kernels: Tensor, 
+        bias: Option<Tensor>,
         stride: usize, 
         padding: usize,
     ) -> Self {
