@@ -32,57 +32,59 @@ impl Tensor {
     }
 }
 
-impl std::ops::Mul<&Tensor> for Tensor {
-    type Output = Self;
+macro_rules! impl_tensor_binop {
+    ($trait:ident, $method:ident, $op:tt) => {
+        impl std::ops::$trait for Tensor {
+            type Output = Tensor;
 
-    fn mul(self, rhs: &Self) -> Self {
-        match self {
-            Self::T2D(data) => Self::T2D(data * rhs.as_array2d()),
-            Self::T3D(data) => Self::T3D(data * rhs.as_array3d()),
+            fn $method(self, rhs: Tensor) -> Tensor {
+                match (self, rhs) {
+                    (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a $op b),
+                    (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a $op b),
+                    _ => panic!("Shape mismatch"),
+                }
+            }
         }
-    }
+
+        impl std::ops::$trait<&Tensor> for Tensor {
+            type Output = Tensor;
+
+            fn $method(self, rhs: &Tensor) -> Tensor {
+                match (self, rhs) {
+                    (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a $op b),
+                    (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a $op b),
+                    _ => panic!("Shape mismatch"),
+                }
+            }
+        }
+
+        impl std::ops::$trait<Tensor> for &Tensor {
+            type Output = Tensor;
+
+            fn $method(self, rhs: Tensor) -> Tensor {
+                match (self, rhs) {
+                    (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a.clone() $op b),
+                    (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a.clone() $op b),
+                    _ => panic!("Shape mismatch"),
+                }
+            }
+        }
+
+        impl std::ops::$trait<&Tensor> for &Tensor {
+            type Output = Tensor;
+
+            fn $method(self, rhs: &Tensor) -> Tensor {
+                match (self, rhs) {
+                    (Tensor::T2D(a), Tensor::T2D(b)) => Tensor::T2D(a.clone() $op b),
+                    (Tensor::T3D(a), Tensor::T3D(b)) => Tensor::T3D(a.clone() $op b),
+                    _ => panic!("Shape mismatch"),
+                }
+            }
+        }
+    };
 }
 
-impl std::ops::Mul<Tensor> for &Tensor {
-    type Output = Tensor;
-
-    fn mul(self, rhs: Tensor) -> Tensor {
-        match self {
-            Tensor::T2D(data) => Tensor::T2D(data * rhs.as_array2d()),
-            Tensor::T3D(data) => Tensor::T3D(data * rhs.as_array3d()),
-        }
-    }
-}
-
-impl std::ops::Mul<&Tensor> for &Tensor {
-    type Output = Tensor;
-
-    fn mul(self, rhs: &Tensor) -> Tensor {
-        match self {
-            Tensor::T2D(data) => Tensor::T2D(data * rhs.as_array2d()),
-            Tensor::T3D(data) => Tensor::T3D(data * rhs.as_array3d()),
-        }
-    }
-}
-
-impl std::ops::Mul<f32> for Tensor {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
-        match self {
-            Self::T2D(data) => Self::T2D(data * rhs),
-            Self::T3D(data) => Self::T3D(data * rhs),
-        }
-    }
-}
-
-impl std::ops::Div<f32> for Tensor {
-    type Output = Self;
-
-    fn div(self, rhs: f32) -> Self {
-        match self {
-            Self::T2D(data) => Self::T2D(data - rhs),
-            Self::T3D(data) => Self::T3D(data - rhs),
-        }
-    }
-}
+impl_tensor_binop!(Add, add, +);
+impl_tensor_binop!(Mul, mul, *);
+impl_tensor_binop!(Sub, sub, -);
+impl_tensor_binop!(Div, div, /);
