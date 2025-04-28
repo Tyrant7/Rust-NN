@@ -2,23 +2,21 @@
 
 ## Currently working on:
 
--   Finish 1D convolutional layers
-    -   Unit tests
--   Stateless layers
-    -   "Parameters" object which holds all parameters and gradients for a given model, then the network indexes
-        into params object to retrieve specific parameters for each layer and feeds it as an input parmeter
+-   Fix up tensor code to support basic ndarray methods and avoid constant calls to
+    .to_arrayXd using macros, then clean up all code in the project to utilize these
 
 ## Next up:
 
--   Better layer abstraction, potentially using an enum
+-   Finish up and organize unit tests for currently implemented features
+-   Pooling layers
+    -   Min pooling
+    -   Max pooling
+    -   Avg pooling
 
 ## Layer types:
 
 -   2D convolutional layers
 -   3D convolutional layers
--   Max pooling
--   Avg pooling
--   Min pooling
 -   Batch norm
 -   RNN support
     -   LSTM support

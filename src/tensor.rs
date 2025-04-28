@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use ndarray::{Array1, Array2, Array3};
 
 #[derive(Debug, Clone)]
@@ -5,6 +7,17 @@ pub enum Tensor {
     T1D(Array1<f32>),
     T2D(Array2<f32>),
     T3D(Array3<f32>),
+}
+
+impl Deref for Tensor {
+    type Target = Array2<f32>;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Tensor::T2D(arr) => arr,
+            _ => panic!("Tried to deref a non-2D tensor"),
+        }
+    }
 }
 
 impl Tensor {
