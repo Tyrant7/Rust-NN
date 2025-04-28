@@ -88,3 +88,14 @@ impl_tensor_binop!(Add, add, +);
 impl_tensor_binop!(Mul, mul, *);
 impl_tensor_binop!(Sub, sub, -);
 impl_tensor_binop!(Div, div, /);
+
+impl std::ops::Div<f32> for Tensor {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self {
+        match self {
+            Self::T2D(data) => Self::T2D(data / rhs),
+            Self::T3D(data) => Self::T3D(data / rhs),
+        }
+    }
+}
