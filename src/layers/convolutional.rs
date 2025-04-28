@@ -41,11 +41,7 @@ impl Convolutional1D {
         padding: usize,
     ) -> Self {
         let kernels = ParameterGroup::new(kernels);
-        let bias = match bias {
-            Some(b) => Some(ParameterGroup::new(b)),
-            None => None
-        };
-
+        let bias = bias.map(ParameterGroup::new);
         Convolutional1D { 
             kernels, 
             bias, 

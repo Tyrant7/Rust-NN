@@ -51,6 +51,7 @@ fn main() {
 
     panic!("Done");
 
+    /* 
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
         Box::new(ReLU),
@@ -94,4 +95,5 @@ fn main() {
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
+    */
 }
