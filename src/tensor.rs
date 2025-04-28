@@ -135,6 +135,76 @@ impl std::ops::Div<f32> for Tensor {
     }
 }
 
+impl std::ops::Div<f32> for &Tensor {
+    type Output = Tensor;
+
+    fn div(self, rhs: f32) -> Tensor {
+        match self {
+            Tensor::T1D(data) => Tensor::T1D(data.clone() / rhs),
+            Tensor::T2D(data) => Tensor::T2D(data.clone() / rhs),
+            Tensor::T3D(data) => Tensor::T3D(data.clone() / rhs),
+        }
+    }
+}
+
+impl std::ops::Mul<f32> for Tensor {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self {
+        match self {
+            Self::T1D(data) => Self::T1D(data * rhs),
+            Self::T2D(data) => Self::T2D(data * rhs),
+            Self::T3D(data) => Self::T3D(data * rhs),
+        }
+    }
+}
+
+impl std::ops::Mul<f32> for &Tensor {
+    type Output = Tensor;
+
+    fn mul(self, rhs: f32) -> Tensor {
+        match self {
+            Tensor::T1D(data) => Tensor::T1D(data.clone() * rhs),
+            Tensor::T2D(data) => Tensor::T2D(data.clone() * rhs),
+            Tensor::T3D(data) => Tensor::T3D(data.clone() * rhs),
+        }
+    }
+}
+
+impl std::ops::SubAssign for Tensor {
+    fn sub_assign(&mut self, rhs: Self) {
+        match (self, rhs) {
+            (Tensor::T1D(ref mut lhs), Tensor::T1D(rhs)) => {
+                *lhs = &*lhs - &rhs;
+            }
+            (Tensor::T2D(ref mut lhs), Tensor::T2D(rhs)) => {
+                *lhs = &*lhs - &rhs;
+            }
+            (Tensor::T3D(ref mut lhs), Tensor::T3D(rhs)) => {
+                *lhs = &*lhs - &rhs;
+            }
+            _ => panic!("Shape mismatch for -= assignment"),
+        }
+    }
+}
+
+impl std::ops::SubAssign<&Tensor> for Tensor {
+    fn sub_assign(&mut self, rhs: &Tensor) {
+        match (self, rhs) {
+            (Tensor::T1D(ref mut lhs), Tensor::T1D(rhs)) => {
+                *lhs = &*lhs - rhs;
+            }
+            (Tensor::T2D(ref mut lhs), Tensor::T2D(rhs)) => {
+                *lhs = &*lhs - rhs;
+            }
+            (Tensor::T3D(ref mut lhs), Tensor::T3D(rhs)) => {
+                *lhs = &*lhs - rhs;
+            }
+            _ => panic!("Shape mismatch for -= assignment"),
+        }
+    }
+}
+
 /*
 macro_rules! impl_tensor_methods {
     ($($method:ident),*) => {

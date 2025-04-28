@@ -1,4 +1,4 @@
-use crate::{layers::Layer, tensor::Tensor};
+use crate::{layers::{Layer, ParameterGroup}, tensor::Tensor};
 
 #[derive(Debug)]
 pub struct Model {
@@ -36,7 +36,7 @@ impl Model {
         }
     }
 
-    pub fn collect_parameters(&mut self) -> Vec<LearnableParameter> {
+    pub fn collect_parameters(&mut self) -> Vec<&mut ParameterGroup> {
         let mut parameters = Vec::new();
         for layer in self.layers.iter_mut() {
             parameters.extend(layer.get_learnable_parameters());
