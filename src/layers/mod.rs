@@ -41,7 +41,5 @@ pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;
 
-use crate::tensor::Tensor;
-
 #[cfg(test)]
 mod tests;

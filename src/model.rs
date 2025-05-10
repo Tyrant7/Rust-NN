@@ -1,4 +1,4 @@
-use crate::{layers::{Layer, ParameterGroup}, tensor::Tensor};
+use crate::layers::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Model {
