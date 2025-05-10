@@ -59,7 +59,7 @@ impl<T: Dimension> ParameterGroup<T>
         }
     }
 
-    pub fn to_learnable_parameter(&mut self) -> LearnableParameter {
+    pub fn as_learnable_parameter(&mut self) -> LearnableParameter {
         LearnableParameter { 
             values: self.values.view_mut().into_dyn(), 
             gradients: self.gradients.view_mut().into_dyn() 
