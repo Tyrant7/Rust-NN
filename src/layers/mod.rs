@@ -74,8 +74,8 @@ use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, OwnedRepr};
 pub mod chain;
 pub use chain::Chain;
 
-pub mod with_forward;
-pub use with_forward::Tracked;
+pub mod tracked;
+pub use tracked::Tracked;
 
 pub mod linear;
 pub use linear::Linear;

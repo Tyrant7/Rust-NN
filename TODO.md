@@ -2,8 +2,7 @@
 
 ## Currently working on:
 
--   Switch back to each layer tracking its own internal forward input state, but use some sort of intermediate
-    abstraction to avoid having the same error checking in each layer
+-   Fix code examples
 
 ## Next up:
 
