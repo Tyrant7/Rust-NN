@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis};
 
-use super::{Layer, ParameterGroup, Tensor};
+use super::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Convolutional1D
@@ -25,9 +25,9 @@ impl Convolutional1D {
         let mut rng = rand::rng();
 
         // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
-        let kernels = Tensor::T3D(Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.));
+        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
         let bias = match use_bias {
-            true => Some(Tensor::T1D(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.)))),
+            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
             false => None,
         };
         
@@ -35,8 +35,8 @@ impl Convolutional1D {
     }
 
     pub fn new_from_kernel(
-        kernels: Tensor, 
-        bias: Option<Tensor>,
+        kernels: Array3<f32>, 
+        bias: Option<Array1<f32>>,
         stride: usize, 
         padding: usize,
     ) -> Self {
@@ -52,9 +52,10 @@ impl Convolutional1D {
 }
 
 impl Layer for Convolutional1D {
-    fn forward(&mut self, input: &Tensor, _train: bool) -> Tensor {
-        let input = input.as_array3d();
-
+    type Input = Array3<f32>;
+    type Output = Array3<f32>;
+    
+    fn forward(&mut self, input: &Self::Input, _train: bool) -> Self::Output {
         let (batch_size, in_features, width) = input.dim();
 
         // Pad the input
@@ -70,14 +71,14 @@ impl Layer for Convolutional1D {
         };
 
         // 1D convolution
-        let (out_features, _, kernel_size) = self.kernels.values.as_array3d().dim();
+        let (out_features, _, kernel_size) = self.kernels.values.dim();
         let output_width = ((width - kernel_size + (2 * self.padding)) / self.stride) + 1;
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, ..]);
-                    let kernel_slice = self.kernels.values.as_array3d().slice(s![out_f, in_f, ..]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
 
                     let conv = convolve1d(input_slice, kernel_slice, self.stride);
 
@@ -90,24 +91,18 @@ impl Layer for Convolutional1D {
 
         // Apply bias to the second dimension (features)
         if let Some(b) = &self.bias {
-            output += &b.values.as_array1d().view()
+            output += &b.values.view()
                 .insert_axis(Axis(0))
                 .insert_axis(Axis(2))
                 .broadcast(output.dim())
                 .unwrap();
         }
-
-        Tensor::T3D(
-            output
-        )
+        output
     }
 
-    fn backward(&mut self, delta: &Tensor, forward_input: &Tensor) -> Tensor {
-        let delta = delta.as_array3d();
-        let forward_input = forward_input.as_array3d();
-
+    fn backward(&mut self, delta: &Self::Output, forward_input: &Self::Input) -> Self::Input {
         let (batch_size, in_features, _) = forward_input.dim();
-        let (out_features, _, _) = self.kernels.values.as_array3d().dim();
+        let (out_features, _, _) = self.kernels.values.dim();
 
         // Compute kernel gradients
         for b in 0..batch_size {
@@ -119,7 +114,7 @@ impl Layer for Convolutional1D {
 
                     // 1D convolution
                     let grad = convolve1d(input_slice, error_slice, self.stride);
-                    self.kernels.gradients.as_array3d_mut()
+                    self.kernels.gradients
                         .slice_mut(s![out_f, in_f, ..])
                         .scaled_add(1., &grad);
                 }
@@ -136,7 +131,7 @@ impl Layer for Convolutional1D {
                     let delta_slice = delta.slice(s![b, out_f, ..]);
 
                     // Flip over width dimension (180 rotation)
-                    let kernel_slice = self.kernels.values.as_array3d().slice(s![out_f, in_f, ..;-1]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
 
                     let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
                     let conv = convolve1d(padded.view(), kernel_slice, self.stride);
@@ -146,10 +141,7 @@ impl Layer for Convolutional1D {
                 }
             }
         }
-
-        Tensor::T3D(
-            error_signal
-        )
+        error_signal
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> {
