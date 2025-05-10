@@ -1,11 +1,11 @@
 use ndarray::ArrayD;
 
-use super::Layer;
+use super::RawLayer;
 
 #[derive(Debug)]
 pub struct ReLU;
 
-impl Layer for ReLU {
+impl RawLayer for ReLU {
     type Input = ArrayD<f32>;
     type Output = ArrayD<f32>;
 

@@ -1,6 +1,6 @@
 use ndarray::ArrayD;
 
-use super::Layer;
+use super::RawLayer;
 
 #[derive(Debug)]
 pub struct Sigmoid;
@@ -11,7 +11,7 @@ impl Sigmoid {
     }
 }
 
-impl Layer for Sigmoid {
+impl RawLayer for Sigmoid {
     type Input = ArrayD<f32>;
     type Output = ArrayD<f32>;
 

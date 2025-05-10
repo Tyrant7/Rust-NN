@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
 
-use super::{Layer, LearnableParameter, ParameterGroup};
+use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Convolutional1D
@@ -51,7 +51,7 @@ impl Convolutional1D {
     }
 }
 
-impl Layer for Convolutional1D {
+impl RawLayer for Convolutional1D {
     type Input = Array3<f32>;
     type Output = Array3<f32>;
     

@@ -1,13 +1,32 @@
-pub trait Layer: std::fmt::Debug
+// Raw layers are layers that actually deal with data
+// All activation functions, fully connected layers, or convolutions, etc. are raw layers
+pub trait RawLayer: std::fmt::Debug
 {
     type Input;
     type Output;
 
     fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output;
-    fn backward(&mut self, input: &Self::Output, forward_input: &Self::Input) -> Self::Input;
+    fn backward(&mut self, error: &Self::Output, forward_input: &Self::Input) -> Self::Input;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
+
+    // TODO: "inspect()" method to print model layers in a prettier way
+}
+
+// Composite layers only handle piping data to raw layers, and don't actually deal with the data itself
+// hence why these layers does not care about the forward input in backpropagation -> they will always
+// delegate error calculations
+pub trait CompositeLayer: std::fmt::Debug {
+    type Input;
+    type Output;
+
+    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output;
+    fn backward(&mut self, error: &Self::Output) -> Self::Input;
+
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
+
+    // TODO: "inspect()" method to print model layers in a prettier way
 }
 
 pub struct LearnableParameter<'a> {
@@ -48,7 +67,15 @@ impl<T: Dimension> ParameterGroup<T>
     }
 }
 
+use std::vec;
+
 use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, OwnedRepr};
+
+pub mod chain;
+pub use chain::Chain;
+
+pub mod with_forward;
+pub use with_forward::Tracked;
 
 pub mod linear;
 pub use linear::Linear;

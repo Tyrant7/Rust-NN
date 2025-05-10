@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{Array2, Axis, Ix2};
 
-use super::{Layer, LearnableParameter, ParameterGroup};
+use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Linear {
@@ -29,7 +29,7 @@ impl Linear {
     }
 }
 
-impl Layer for Linear {
+impl RawLayer for Linear {
     type Input = Array2<f32>;
     type Output = Array2<f32>;
 

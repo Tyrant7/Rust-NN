@@ -4,14 +4,11 @@
 use ndarray::{Array2, Array3};
 
 use layers::Convolutional1D;
-use layers::Layer;
-
-//
-mod chain;
-use chain::Model;
+use layers::RawLayer;
 
 //
 mod layers;
+use layers::Chain;
 use layers::Linear;
 use layers::Dropout;
 

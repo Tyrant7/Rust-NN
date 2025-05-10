@@ -2,7 +2,7 @@
 mod conv {
     use ndarray::{Array1, Array3};
 
-    use crate::{layers::{Convolutional1D, Layer}, tensor::Tensor};
+    use crate::{layers::{Convolutional1D, RawLayer}, tensor::Tensor};
 
     // TODO: Tests for all other layers, including backpropagation
 

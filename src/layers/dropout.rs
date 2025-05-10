@@ -1,7 +1,7 @@
 use ndarray::ArrayD;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use super::Layer;
+use super::RawLayer;
 
 #[derive(Debug)]
 pub struct Dropout {
@@ -20,7 +20,7 @@ impl Dropout {
     }
 }
 
-impl Layer for Dropout {
+impl RawLayer for Dropout {
     type Input = ArrayD<f32>;
     type Output = ArrayD<f32>;
 
