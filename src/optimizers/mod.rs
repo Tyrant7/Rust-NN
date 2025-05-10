@@ -1,14 +1,11 @@
-use crate::layers::ValueGradPair;
+use crate::layers::LearnableParameter;
 
 pub trait Optimizer {
-    fn step(&mut self, parameters: &mut [ValueGradPair], n_samples: usize);
-    fn zero_gradients(&self, parameters: &mut [ValueGradPair]) {
-        for param in parameters.iter_mut() {
-            param.gradients = param.gradients.map(|_| 0.);
-        }
+    fn step(&mut self, parameters: &mut [LearnableParameter], n_samples: usize);
+    fn zero_gradients(&self, parameters: &mut [LearnableParameter]) {
+        parameters.iter_mut().map(|p| p.zero_grads());
     }
 }
 
 pub mod stochastic_gradient_descent;
 pub use stochastic_gradient_descent::SGD;
-

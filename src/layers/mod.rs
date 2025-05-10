@@ -15,6 +15,12 @@ pub struct LearnableParameter<'a> {
     pub gradients: ArrayViewMutD<'a, f32>,
 }
 
+impl<'a> LearnableParameter<'a> {
+    pub fn zero_grads(&mut self) {
+        self.gradients.fill(0.)
+    }
+}
+
 #[derive(Debug)]
 struct ParameterGroup<T>
 where 
