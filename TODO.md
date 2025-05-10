@@ -2,8 +2,8 @@
 
 ## Currently working on:
 
--   Fix up tensor code to support basic ndarray methods and avoid constant calls to
-    .to_arrayXd using macros, then clean up all code in the project to utilize these
+-   Switch back to each layer tracking its own internal forward input state, but use some sort of intermediate
+    abstraction to avoid having the same error checking in each layer
 
 ## Next up:
 

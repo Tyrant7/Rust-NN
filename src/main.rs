@@ -7,8 +7,8 @@ use layers::Convolutional1D;
 use layers::Layer;
 
 //
-mod model;
-use model::Model;
+mod chain;
+use chain::Model;
 
 //
 mod layers;
