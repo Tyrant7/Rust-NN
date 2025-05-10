@@ -39,6 +39,13 @@ impl<T: Dimension> ParameterGroup<T>
             gradients
         }
     }
+
+    pub fn to_learnable_parameter(&mut self) -> LearnableParameter {
+        LearnableParameter { 
+            values: self.values.view_mut().into_dyn(), 
+            gradients: self.gradients.view_mut().into_dyn() 
+        }
+    }
 }
 
 use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, OwnedRepr};

@@ -145,9 +145,9 @@ impl Layer for Convolutional1D {
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
-        let mut params = vec![&mut self.kernels];
+        let mut params = vec![self.kernels.to_learnable_parameter()];
         if let Some(bias) = &mut self.bias {
-            params.push(bias);
+            params.push(bias.to_learnable_parameter());
         }
         params
     }

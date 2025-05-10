@@ -51,8 +51,8 @@ impl Layer for Linear {
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
         vec![
-            &mut self.weights, 
-            &mut self.bias,
+            self.weights.to_learnable_parameter(), 
+            self.bias.to_learnable_parameter(),
         ]
     }
 }
