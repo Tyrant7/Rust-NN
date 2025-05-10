@@ -1,9 +1,11 @@
-use crate::layers::Layer;
+use ndarray::ArrayD;
+
+use crate::layers::{Layer, LearnableParameter};
 
 #[derive(Debug)]
 pub struct Model {
     layers: Vec<Box<dyn Layer>>,
-    forward_inputs: Vec<Option<Tensor>>,
+    forward_inputs: Vec<Option<ArrayD<f32>>>,
     pub train: bool,
 }
 
@@ -36,7 +38,7 @@ impl Model {
         }
     }
 
-    pub fn collect_parameters(&mut self) -> Vec<&mut ParameterGroup> {
+    pub fn collect_parameters(&mut self) -> Vec<LearnableParameter> {
         let mut parameters = Vec::new();
         for layer in self.layers.iter_mut() {
             parameters.extend(layer.get_learnable_parameters());

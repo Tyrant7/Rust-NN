@@ -1,12 +1,13 @@
+use ndarray::ArrayD;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use super::{Layer, Tensor};
+use super::Layer;
 
 #[derive(Debug)]
 pub struct Dropout {
     rate: f32,
     rng: SmallRng,
-    forward_mask: Option<Tensor>,
+    forward_mask: Option<ArrayD<f32>>,
 }
 
 impl Dropout {
@@ -20,7 +21,10 @@ impl Dropout {
 }
 
 impl Layer for Dropout {
-    fn forward(&mut self, input: &Tensor, train: bool) -> Tensor {
+    type Input = ArrayD<f32>;
+    type Output = ArrayD<f32>;
+
+    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output {
         // Dropout layers are disable outside of train mode
         if !train {
             return input.clone();
@@ -37,7 +41,7 @@ impl Layer for Dropout {
         input * &mask / (1. - self.rate)
     }
 
-    fn backward(&mut self, delta: &Tensor, _forward_input: &Tensor) -> Tensor {
+    fn backward(&mut self, delta: &Self::Output, _forward_input: &Self::Input) -> Self::Input {
         let mask = self.forward_mask.as_ref().expect("No mask created during forward pass or forward never called");
         delta * mask / (1. - self.rate)
     }
