@@ -3,6 +3,7 @@
 
 use layers::chain;
 use layers::Tracked;
+use ndarray::ArrayD;
 use ndarray::{Array2, Array3};
 
 use layers::Convolutional1D;
