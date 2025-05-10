@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use layers::chain;
+use layers::Tracked;
 use ndarray::{Array2, Array3};
 
 use layers::Convolutional1D;
@@ -46,8 +48,15 @@ fn main() {
     println!("errors: {:?}", error);
     println!("final:  {:?}", backward);
 
-    panic!("Done");
+    
+    let layer1 = Tracked::new(Linear::new_from_rand(2, 16));
+    let layer2 = Tracked::new(ReLU);
+    let layer3 = Tracked::new(Linear::new_from_rand(16, 3));
 
+    let chain1 = Chain::new(layer1, layer2);
+    let network = Chain::new(chain1, layer3);
+
+    panic!("Done");
     /* 
     let mut network = Model::new(vec![
         Box::new(Linear::new_from_rand(2, 16)),
