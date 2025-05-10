@@ -7,19 +7,27 @@ pub trait Layer: std::fmt::Debug
     fn backward(&mut self, input: &Self::Output, forward_input: &Self::Input) -> Self::Input;
 
     // Not all layers have learnable parameters
-    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> { Vec::new() }
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { Vec::new() }
+}
+
+pub struct LearnableParameter<'a> {
+    pub values: ArrayViewMutD<'a, f32>,
+    pub gradients: ArrayViewMutD<'a, f32>,
 }
 
 #[derive(Debug)]
-pub struct ParameterGroup
+struct ParameterGroup<T>
+where 
+    T: Dimension
 {
-    pub values: ArrayD<f32>,
-    pub gradients: ArrayD<f32>,
+    pub values: ArrayBase<OwnedRepr<f32>, T>,
+    pub gradients: ArrayBase<OwnedRepr<f32>, T>,
 }
 
-impl ParameterGroup {
-    pub fn new(initial_values: ArrayD<f32>) -> Self {
-        let gradients = ArrayD::zeros(initial_values.raw_dim());
+impl<T: Dimension> ParameterGroup<T>
+{
+    pub fn new(initial_values: ArrayBase<OwnedRepr<f32>, T>) -> Self {
+        let gradients = Array::zeros(initial_values.raw_dim());
         ParameterGroup {
             values: initial_values,
             gradients
@@ -37,7 +45,7 @@ pub mod convolutional;
 pub use convolutional::Convolutional1D;
 
 pub mod relu;
-use ndarray::ArrayD;
+use ndarray::{Array, ArrayBase, ArrayD, ArrayViewMutD, AsArray, Dimension, OwnedRepr};
 pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;

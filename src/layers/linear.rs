@@ -1,12 +1,12 @@
 use rand::Rng;
-use ndarray::{Array2, Axis};
+use ndarray::{Array2, Axis, Ix2};
 
 use super::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Linear {
-    weights: ParameterGroup,
-    bias: ParameterGroup,
+    weights: ParameterGroup<Ix2>,
+    bias: ParameterGroup<Ix2>,
 }
 
 impl Linear {
@@ -46,7 +46,7 @@ impl Layer for Linear {
         self.bias.gradients    += &delta.sum_axis(Axis(0)).insert_axis(Axis(1)).t();
 
         // Propagate the signal backward to the previous layer
-        delta.dot(self.weights.values)
+        delta.dot(&self.weights.values)
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> {

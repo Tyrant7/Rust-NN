@@ -1,13 +1,13 @@
 use rand::Rng;
-use ndarray::{s, Array1, Array3, ArrayView1, Axis};
+use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
 
 use super::{Layer, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Convolutional1D
 {
-    kernels: ParameterGroup,
-    bias: Option<ParameterGroup>,
+    kernels: ParameterGroup<Ix3>,
+    bias: Option<ParameterGroup<Ix1>>,
 
     stride: usize,
     padding: usize,
