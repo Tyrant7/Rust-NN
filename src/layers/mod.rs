@@ -13,13 +13,13 @@ pub trait Layer: std::fmt::Debug
 #[derive(Debug)]
 pub struct ParameterGroup
 {
-    pub values: Tensor,
-    pub gradients: Tensor,
+    pub values: ArrayD<f32>,
+    pub gradients: ArrayD<f32>,
 }
 
 impl ParameterGroup {
-    pub fn new(initial_values: Tensor) -> Self {
-        let gradients = initial_values.map(|_| 0.);
+    pub fn new(initial_values: ArrayD<f32>) -> Self {
+        let gradients = ArrayD::zeros(initial_values.raw_dim());
         ParameterGroup {
             values: initial_values,
             gradients
@@ -37,6 +37,7 @@ pub mod convolutional;
 pub use convolutional::Convolutional1D;
 
 pub mod relu;
+use ndarray::ArrayD;
 pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use ndarray::{Array2, Array3};
 
 use layers::Convolutional1D;
@@ -6,9 +8,6 @@ use layers::Layer;
 //
 mod model;
 use model::Model;
-
-mod tensor;
-use tensor::Tensor;
 
 //
 mod layers;
