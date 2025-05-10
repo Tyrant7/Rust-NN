@@ -1,4 +1,4 @@
-use crate::layers::{Layer, ParameterGroup};
+use crate::layers::Layer;
 
 #[derive(Debug)]
 pub struct Model {

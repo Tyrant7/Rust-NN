@@ -41,6 +41,8 @@ impl<T: Dimension> ParameterGroup<T>
     }
 }
 
+use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, OwnedRepr};
+
 pub mod linear;
 pub use linear::Linear;
 
@@ -51,7 +53,6 @@ pub mod convolutional;
 pub use convolutional::Convolutional1D;
 
 pub mod relu;
-use ndarray::{Array, ArrayBase, ArrayD, ArrayViewMutD, AsArray, Dimension, OwnedRepr};
 pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;

@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{Array2, Axis, Ix2};
 
-use super::{Layer, ParameterGroup};
+use super::{Layer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Linear {
@@ -49,7 +49,7 @@ impl Layer for Linear {
         delta.dot(&self.weights.values)
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> {
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
         vec![
             &mut self.weights, 
             &mut self.bias,

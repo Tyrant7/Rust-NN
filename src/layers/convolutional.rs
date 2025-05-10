@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
 
-use super::{Layer, ParameterGroup};
+use super::{Layer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
 pub struct Convolutional1D
@@ -144,7 +144,7 @@ impl Layer for Convolutional1D {
         error_signal
     }
 
-    fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> {
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
         let mut params = vec![&mut self.kernels];
         if let Some(bias) = &mut self.bias {
             params.push(bias);
