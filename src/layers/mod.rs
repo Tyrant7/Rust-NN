@@ -1,7 +1,10 @@
 pub trait Layer: std::fmt::Debug
 {
-    fn forward(&mut self, input: &Tensor, train: bool) -> Tensor;
-    fn backward(&mut self, input: &Tensor, forward_input: &Tensor) -> Tensor;
+    type Input;
+    type Output;
+
+    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output;
+    fn backward(&mut self, input: &Self::Output, forward_input: &Self::Input) -> Self::Input;
 
     // Not all layers have learnable parameters
     fn get_learnable_parameters(&mut self) -> Vec<&mut ParameterGroup> { Vec::new() }
