@@ -56,22 +56,10 @@ fn main() {
     let mut network = chain!(
         Linear::new_from_rand(2, 16), 
         ReLU, 
-        Linear::new_from_rand(16, 3)
+        Dropout::new(0.5, 5), 
+        Linear::new_from_rand(16, 1),
+        Sigmoid
     );
-
-    let input = Array2::zeros((1, 2));
-    let output = network.forward(&input, true);
-    println!("{output}");
-
-    panic!("Done");
-    /* 
-    let mut network = Model::new(vec![
-        Box::new(Linear::new_from_rand(2, 16)),
-        Box::new(ReLU),
-        Box::new(Dropout::new(0.5, 5)),
-        Box::new(Linear::new_from_rand(16, 1)),
-        Box::new(Sigmoid),
-    ]);
 
     let data = [
         ([0., 0.], 0.),
@@ -80,7 +68,7 @@ fn main() {
         ([1., 1.], 0.),
     ];
 
-    let mut optimizer = SGD::new(&network.collect_parameters(), 0.01, 0.9);
+    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
     let epochs = 100000;
 
     for epc in 0..epochs {
@@ -89,24 +77,23 @@ fn main() {
         // Iterate over our entire dataset to collect gradients before applying them
         for (x, label) in data.iter() {
             let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-            let label = Array2::from_shape_fn((1, 1), |_| *label);
+            let label = Array2::from_shape_fn((1, 1), |_| *label).into_dyn();
 
-            let pred = network.forward(x);
+            let pred = network.forward(&x, true);
 
             let cost = MSELoss::original(&pred, &label);
             avg_cost += cost;
 
             // Back propagation
-            network.backward(MSELoss::derivative(&pred, &label));
+            network.backward(&MSELoss::derivative(&pred, &label));
         }
 
         // Gradient application
-        optimizer.step(&mut network.collect_parameters(), data.len());
+        optimizer.step(&mut network.get_learnable_parameters(), data.len());
 
         // Zero gradients before next epoch
-        optimizer.zero_gradients(&mut network.collect_parameters());
+        optimizer.zero_gradients(&mut network.get_learnable_parameters());
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32)
     }
-    */
 }
