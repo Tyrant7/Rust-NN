@@ -1,8 +1,8 @@
-use ndarray::Array2;
+use ndarray::ArrayD;
 
 pub trait LossFunction {
-    fn original(pred: &Array2<f32>, label: &Array2<f32>) -> f32;
-    fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32>;
+    fn original(pred: &ArrayD<f32>, label: &ArrayD<f32>) -> f32;
+    fn derivative(pred: &ArrayD<f32>, label: &ArrayD<f32>) -> ArrayD<f32>;
 }
 
 pub mod binary_cross_entropy_loss;
