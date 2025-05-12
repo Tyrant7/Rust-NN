@@ -56,7 +56,7 @@ fn main() {
     let mut network = chain!(
         Linear::new_from_rand(2, 16), 
         ReLU, 
-        Dropout::new(0.5, 5), 
+        // Dropout::new(0.5, 5), 
         Linear::new_from_rand(16, 1),
         Sigmoid
     );
