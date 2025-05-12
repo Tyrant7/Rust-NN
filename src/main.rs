@@ -36,7 +36,7 @@ fn main() {
         ReLU, 
         // Dropout::new(0.5, 5), 
         Linear::new_from_rand(16, 1),
-        Sigmoid
+        Sigmoid,
     );
 
     let data = [
