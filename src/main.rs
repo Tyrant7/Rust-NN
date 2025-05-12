@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 use layers::chain;
+use layers::CompositeLayer;
 use layers::Tracked;
 use ndarray::ArrayD;
 use ndarray::{Array2, Array3};
@@ -30,6 +31,7 @@ use optimizers::SGD;
 
 fn main() {
 
+    /*
     let mut conv_1d = Convolutional1D::new_from_rand(2, 3, 2, false, 1, 0);
     
     let input = Array3::from_shape_vec((1, 2, 7), 
@@ -49,14 +51,19 @@ fn main() {
     println!("errors: {:?}", error);
     println!("final:  {:?}", backward);
 
-    
+    */
+
     let layer1 = Tracked::new(Linear::new_from_rand(2, 16));
     let layer2 = Tracked::new(ReLU);
     let layer3 = Tracked::new(Linear::new_from_rand(16, 3));
 
     let chain1 = Chain::new(layer1, 
         layer2);
-    let network = Chain::new(chain1, layer3);
+    let mut network = Chain::new(chain1, layer3);
+
+    let input = Array2::zeros((1, 2));
+    let output = network.forward(&input, true);
+    println!("{output}");
 
     panic!("Done");
     /* 
