@@ -18,3 +18,31 @@ impl RawLayer for ReLU {
         activation_derivative * error
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ndarray::Array3;
+
+    use super::*;
+
+    #[test]
+    fn test_relu() {
+        let input = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
+            -2., -100.,
+            0.,   5.,
+            0.,   0.,
+            1.,   200.,
+        ]).unwrap().into_dyn();
+        let mut relu = ReLU;
+        let output = relu.forward(&input, false);
+
+        let target = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
+            0., 0.,
+            0., 5.,
+            0., 0.,
+            1., 200.,
+        ]).unwrap().into_dyn();
+
+        assert_eq!(output, target);
+    }
+}
