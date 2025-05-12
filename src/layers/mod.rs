@@ -5,11 +5,8 @@ pub trait RawLayer: std::fmt::Debug
     type Input: Dimension;
     type Output: Dimension;
 
-    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, Self::Input>, train: bool) -> ArrayBase<OwnedRepr<f32>, Self::Output>;
-    fn backward(&mut self, 
-        error: &ArrayBase<OwnedRepr<f32>, Self::Output>, 
-        forward_input: &ArrayBase<OwnedRepr<f32>, Self::Input>
-    ) -> ArrayBase<OwnedRepr<f32>, Self::Input>;
+    fn forward(&mut self, input: &Array<f32, Self::Input>, train: bool) -> Array<f32, Self::Output>;
+    fn backward(&mut self, error: &Array<f32, Self::Output>, forward_input: &Array<f32, Self::Input>) -> Array<f32, Self::Input>;
 
     // Not all layers have learnable parameters
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
@@ -24,8 +21,8 @@ pub trait CompositeLayer: std::fmt::Debug {
     type Input: Dimension;
     type Output: Dimension;
 
-    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, Self::Input>, train: bool) -> ArrayBase<OwnedRepr<f32>, Self::Output>;
-    fn backward(&mut self, error: &ArrayBase<OwnedRepr<f32>, Self::Output>) -> ArrayBase<OwnedRepr<f32>, Self::Input>;
+    fn forward(&mut self, input: &Array<f32, Self::Input>, train: bool) -> Array<f32, Self::Output>;
+    fn backward(&mut self, error: &Array<f32, Self::Output>) -> Array<f32, Self::Input>;
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
 
