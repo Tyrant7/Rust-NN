@@ -37,13 +37,17 @@ where
 
     fn forward(&mut self, input: &Array<f32, Self::Input>, train: bool) -> Array<f32, Self::Output> {
         let out1 = self.inner.forward(input, train);
-        let resized_out1 = out1.into_dimensionality().expect("Incompatible array size!");
+        let resized_out1 = out1
+            .into_dimensionality()
+            .expect("Incompatible dimensions between L1 Output and L2 Input during call to forward method");
         self.next.forward(&resized_out1, train)
     }
 
     fn backward(&mut self, error: &Array<f32, Self::Output>) -> Array<f32, Self::Input> {
         let err1 = self.next.backward(error);
-        let resized_err1 = err1.into_dimensionality().expect("Incompatible array size!");
+        let resized_err1 = err1
+            .into_dimensionality()
+            .expect("Incompatible dimensions between L1 Output and L2 Input during call to backward method");
         self.inner.backward(&resized_err1)
     }
 
