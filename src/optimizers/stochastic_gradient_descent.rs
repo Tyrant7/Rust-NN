@@ -23,7 +23,7 @@ impl SGD {
 }
 
 impl Optimizer for SGD {
-    fn step(&mut self, parameters: &mut [LearnableParameter], n_samples: usize) {
+    fn step(&mut self, parameters: &mut [LearnableParameter], n_samples: usize) {        
         for (i, param) in parameters.iter_mut().enumerate() {
             let grad = param.gradients.map(|x| x / (n_samples as f32));
             let update = &self.velocities[i] * self.momentum + grad * self.learning_rate;

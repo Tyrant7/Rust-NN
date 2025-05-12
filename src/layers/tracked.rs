@@ -47,5 +47,9 @@ where
             .expect("Backward called before forward or outside of training");
         self.inner.backward(error, input)
     }
+
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
+        self.inner.get_learnable_parameters()
+    }
 }
 
