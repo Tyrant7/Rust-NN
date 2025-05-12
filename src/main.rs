@@ -54,7 +54,8 @@ fn main() {
     let layer2 = Tracked::new(ReLU);
     let layer3 = Tracked::new(Linear::new_from_rand(16, 3));
 
-    let chain1 = Chain::new(layer1, layer2);
+    let chain1 = Chain::new(layer1, 
+        layer2);
     let network = Chain::new(chain1, layer3);
 
     panic!("Done");

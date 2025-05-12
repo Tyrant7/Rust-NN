@@ -30,16 +30,16 @@ impl Linear {
 }
 
 impl RawLayer for Linear {
-    type Input = Array2<f32>;
-    type Output = Array2<f32>;
+    type Input = Ix2;
+    type Output = Ix2;
 
-    fn forward(&mut self, input: &Self::Input, _train: bool) -> Self::Output {
+    fn forward(&mut self, input: &Array2<f32>, _train: bool) -> Array2<f32> {
         input.dot(&self.weights.values.t()) + &self.bias.values
     }
 
     // Here, we'll be fed the delta after the activation derivative has been applied,
     // since the activation functions will handle that portion themselves
-    fn backward(&mut self, delta: &Self::Output, forward_input: &Self::Input) -> Self::Input {
+    fn backward(&mut self, delta: &Array2<f32>, forward_input: &Array2<f32>) -> Array2<f32> {
 
         // Accumulate gradients in training
         self.weights.gradients += &forward_input.t().dot(delta).t();

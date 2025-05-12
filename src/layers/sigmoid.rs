@@ -1,4 +1,4 @@
-use ndarray::ArrayD;
+use ndarray::{ArrayD, IxDyn};
 
 use super::RawLayer;
 
@@ -12,14 +12,14 @@ impl Sigmoid {
 }
 
 impl RawLayer for Sigmoid {
-    type Input = ArrayD<f32>;
-    type Output = ArrayD<f32>;
+    type Input = IxDyn;
+    type Output = IxDyn;
 
-    fn forward(&mut self, input: &Self::Input, _train: bool) -> Self::Output {
+    fn forward(&mut self, input: &ArrayD<f32>, _train: bool) -> ArrayD<f32> {
         Sigmoid::sigmoid(input)
     }
 
-    fn backward(&mut self, error: &Self::Output, forward_z: &Self::Input) -> Self::Input {
+    fn backward(&mut self, error: &ArrayD<f32>, forward_z: &ArrayD<f32>) -> ArrayD<f32> {
         let sig = Sigmoid::sigmoid(forward_z);
         let one_minus = sig.map(|x| 1. - x);
         let activation_derivative = sig * &one_minus;

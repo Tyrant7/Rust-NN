@@ -2,11 +2,14 @@
 // All activation functions, fully connected layers, or convolutions, etc. are raw layers
 pub trait RawLayer: std::fmt::Debug
 {
-    type Input;
-    type Output;
+    type Input: Dimension;
+    type Output: Dimension;
 
-    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output;
-    fn backward(&mut self, error: &Self::Output, forward_input: &Self::Input) -> Self::Input;
+    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, Self::Input>, train: bool) -> ArrayBase<OwnedRepr<f32>, Self::Output>;
+    fn backward(&mut self, 
+        error: &ArrayBase<OwnedRepr<f32>, Self::Output>, 
+        forward_input: &ArrayBase<OwnedRepr<f32>, Self::Input>
+    ) -> ArrayBase<OwnedRepr<f32>, Self::Input>;
 
     // Not all layers have learnable parameters
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
@@ -18,11 +21,11 @@ pub trait RawLayer: std::fmt::Debug
 // hence why these layers does not care about the forward input in backpropagation -> they will always
 // delegate error calculations
 pub trait CompositeLayer: std::fmt::Debug {
-    type Input;
-    type Output;
+    type Input: Dimension;
+    type Output: Dimension;
 
-    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output;
-    fn backward(&mut self, error: &Self::Output) -> Self::Input;
+    fn forward(&mut self, input: &ArrayBase<OwnedRepr<f32>, Self::Input>, train: bool) -> ArrayBase<OwnedRepr<f32>, Self::Output>;
+    fn backward(&mut self, error: &ArrayBase<OwnedRepr<f32>, Self::Output>) -> ArrayBase<OwnedRepr<f32>, Self::Input>;
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> { vec![] }
 
@@ -69,7 +72,7 @@ impl<T: Dimension> ParameterGroup<T>
 
 use std::vec;
 
-use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, OwnedRepr};
+use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, IntoDimension, OwnedRepr};
 
 pub mod chain;
 pub use chain::Chain;

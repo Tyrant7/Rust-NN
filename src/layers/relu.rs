@@ -1,4 +1,4 @@
-use ndarray::ArrayD;
+use ndarray::{ArrayD, IxDyn};
 
 use super::RawLayer;
 
@@ -6,14 +6,14 @@ use super::RawLayer;
 pub struct ReLU;
 
 impl RawLayer for ReLU {
-    type Input = ArrayD<f32>;
-    type Output = ArrayD<f32>;
+    type Input = IxDyn;
+    type Output = IxDyn;
 
-    fn forward(&mut self, input: &Self::Input, _train: bool) -> Self::Output {
+    fn forward(&mut self, input: &ArrayD<f32>, _train: bool) -> ArrayD<f32> {
         input.map(|x| x.max(0.))
     }
 
-    fn backward(&mut self, error: &Self::Output, forward_z: &Self::Input) -> Self::Input {
+    fn backward(&mut self, error: &ArrayD<f32>, forward_z: &ArrayD<f32>) -> ArrayD<f32> {
         let activation_derivative = forward_z.map(|x| if *x <= 0. { 0. } else { 1. });
         activation_derivative * error
     }

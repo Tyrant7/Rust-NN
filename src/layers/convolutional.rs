@@ -52,10 +52,10 @@ impl Convolutional1D {
 }
 
 impl RawLayer for Convolutional1D {
-    type Input = Array3<f32>;
-    type Output = Array3<f32>;
+    type Input = Ix3;
+    type Output = Ix3;
     
-    fn forward(&mut self, input: &Self::Input, _train: bool) -> Self::Output {
+    fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
 
         // Pad the input
@@ -100,7 +100,7 @@ impl RawLayer for Convolutional1D {
         output
     }
 
-    fn backward(&mut self, delta: &Self::Output, forward_input: &Self::Input) -> Self::Input {
+    fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
         let (batch_size, in_features, _) = forward_input.dim();
         let (out_features, _, _) = self.kernels.values.dim();
 

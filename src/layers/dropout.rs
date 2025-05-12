@@ -1,4 +1,4 @@
-use ndarray::ArrayD;
+use ndarray::{ArrayD, IxDyn};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
 use super::RawLayer;
@@ -21,10 +21,10 @@ impl Dropout {
 }
 
 impl RawLayer for Dropout {
-    type Input = ArrayD<f32>;
-    type Output = ArrayD<f32>;
+    type Input = IxDyn;
+    type Output = IxDyn;
 
-    fn forward(&mut self, input: &Self::Input, train: bool) -> Self::Output {
+    fn forward(&mut self, input: &ArrayD<f32>, train: bool) -> ArrayD<f32> {
         // Dropout layers are disable outside of train mode
         if !train {
             return input.clone();
@@ -41,7 +41,7 @@ impl RawLayer for Dropout {
         input * &mask / (1. - self.rate)
     }
 
-    fn backward(&mut self, delta: &Self::Output, _forward_input: &Self::Input) -> Self::Input {
+    fn backward(&mut self, delta: &ArrayD<f32>, _forward_input: &ArrayD<f32>) -> ArrayD<f32> {
         let mask = self.forward_mask.as_ref().expect("No mask created during forward pass or forward never called");
         delta * mask / (1. - self.rate)
     }
