@@ -68,3 +68,13 @@ macro_rules! chain {
         Chain::new(Tracked::new($a), chain!($($rest),+))
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        unimplemented!()
+    }
+}

@@ -46,3 +46,13 @@ impl RawLayer for Dropout {
         delta * mask / (1. - self.rate)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        unimplemented!()
+    }
+}
