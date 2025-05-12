@@ -2,11 +2,11 @@
 
 ## Currently working on:
 
--   Fix code examples and code cleanup on main file
 -   Finish up and organize unit tests for currently implemented features
     -   Also put unit tests in files with their code, as per the Rust best practices
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
+-   Finish Conv1D bias backprop implementation
 
 ## Next up:
 

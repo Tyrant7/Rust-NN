@@ -30,29 +30,7 @@ use optimizers::Optimizer;
 use optimizers::SGD;
 
 fn main() {
-
-    /*
-    let mut conv_1d = Convolutional1D::new_from_rand(2, 3, 2, false, 1, 0);
-    
-    let input = Array3::from_shape_vec((1, 2, 7), 
-    [0_f32, 1., 2., 3., 4., 5., 6.,
-    0_f32, 2., 4., 6., 8., 10., 12.].to_vec()).unwrap();
-    let output = conv_1d.forward(&input, true);
-    
-    println!("input:  {:?}", input);
-    println!("output: {:?}", output);
-
-    let error = Array3::from_shape_vec((1, 3, 6), 
-    [3_f32, 3., 3., 3., 3., 3.,
-    0_f32, 0., 0., 0., 0., 0.,
-    0_f32, 0., 0., 0., 0., 0.].to_vec()).unwrap();
-    let backward = conv_1d.backward(&error, &input);
-
-    println!("errors: {:?}", error);
-    println!("final:  {:?}", backward);
-
-    */
-
+    // Example usage of the library solving the XOR problem
     let mut network = chain!(
         Linear::new_from_rand(2, 16), 
         ReLU, 
