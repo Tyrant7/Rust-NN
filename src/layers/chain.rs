@@ -58,3 +58,23 @@ where
         parameters
     }
 }
+
+#[macro_export]
+macro_rules! chain {
+    ($a:ident, $b:ident) => {
+        Chain::new(Tracked::new($a), Tracked::new($b))
+    };
+    
+    // Recursive expansion for more than 2 parameters
+    ($a:ident, $($rest:ident),+) => {
+        Chain::new(Tracked::new($a), chain!($($rest),+))
+    };
+
+    ($a:expr, $b:expr) => {
+        Chain::new(Tracked::new($a), Tracked::new($b))
+    };
+
+    ($a:expr, $($rest:expr),+) => {
+        Chain::new(Tracked::new($a), chain!($($rest),+))
+    };
+}

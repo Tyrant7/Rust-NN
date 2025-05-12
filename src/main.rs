@@ -53,13 +53,11 @@ fn main() {
 
     */
 
-    let layer1 = Tracked::new(Linear::new_from_rand(2, 16));
-    let layer2 = Tracked::new(ReLU);
-    let layer3 = Tracked::new(Linear::new_from_rand(16, 3));
-
-    let chain1 = Chain::new(layer1, 
-        layer2);
-    let mut network = Chain::new(chain1, layer3);
+    let mut network = chain!(
+        Linear::new_from_rand(2, 16), 
+        ReLU, 
+        Linear::new_from_rand(16, 3)
+    );
 
     let input = Array2::zeros((1, 2));
     let output = network.forward(&input, true);
