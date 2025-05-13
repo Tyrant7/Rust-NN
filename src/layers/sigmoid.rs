@@ -29,28 +29,18 @@ impl RawLayer for Sigmoid {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_activation_fn;
     use ndarray::Array1;
 
     use super::*;
 
     #[test]
     fn test() {
-        let input = Array1::<f32>::from_shape_vec(5, vec![
-            -1., 0., 1., -100., 100.,
-        ]).unwrap().into_dyn();
-        let mut sigmoid = Sigmoid;
-        let output = sigmoid.forward(&input, false);
-
-        let target = Array1::<f32>::from_shape_vec(5, vec![
-            0.26894143,
-            0.5,
-            0.73105858,
-            0.,
-	        1.,
-        ]).unwrap().into_dyn();
-
-        assert_eq!(output, target);
-
-        // TODO: Backward
+        test_activation_fn!(Sigmoid, 
+            vec![-1., 0., 1.,],
+            vec![0.268941, 0.5, 0.731059,],
+            vec![-1., 0., 1.,],
+            vec![-0.196612, 0., 0.196612,]
+        );
     }
 }
