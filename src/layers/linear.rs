@@ -1,5 +1,5 @@
 use rand::Rng;
-use ndarray::{Array2, Axis, Ix2};
+use ndarray::{Array2, ArrayView2, Axis, Ix2};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -10,6 +10,22 @@ pub struct Linear {
 }
 
 impl Linear {
+    pub fn new_from_params(
+        weights: Array2<f32>,
+        bias: Vec<f32>,
+    ) -> Linear {
+        let outputs = weights.dim().0;
+        let weights = ParameterGroup::new(weights);
+        let bias = ParameterGroup::new(
+            Array2::from_shape_vec((1, outputs), bias)
+            .expect("Mismatch between bias and weight shape in layer initialization!")
+        );
+        Linear {
+            weights,
+            bias,
+        }
+    }
+
     pub fn new_from_rand(
         inputs: usize, 
         outputs: usize, 
@@ -59,10 +75,63 @@ impl RawLayer for Linear {
 
 #[cfg(test)]
 mod tests {
+    use ndarray::Array1;
+
     use super::*;
 
     #[test]
-    fn test() {
-        unimplemented!()
+    fn test_forward() {
+        let weights = Array2::from_shape_vec((2, 3), vec![
+            1., 0., -1.,
+            0., 1., 2.,
+        ]).unwrap();
+        let bias = vec![1., 0.,];
+        let mut linear = Linear::new_from_params(weights, bias);
+
+        let input = Array2::<f32>::from_shape_vec((1, 3), vec![
+            1., 2., 3.,
+        ]).unwrap();
+        let output = linear.forward(&input, false);
+
+        let target = Array2::<f32>::from_shape_vec((1, 2), vec![
+            -1., 8.,
+        ]).unwrap();
+
+        assert_eq!(output, target);
+    }
+
+    #[test]
+    fn test_backward() {
+        let weights = Array2::from_shape_vec((1, 3), vec![
+            1., 0., -1.,
+        ]).unwrap();
+        let bias = vec![1.,];
+        let mut linear = Linear::new_from_params(weights, bias);
+
+        let input = Array2::<f32>::from_shape_vec((1, 3), vec![
+            1., 2., 3.,
+        ]).unwrap();
+        linear.forward(&input, false);
+
+        let error = Array2::<f32>::from_shape_vec((1, 1), vec![
+            -1.,
+        ]).unwrap();
+        let error_signal = linear.backward(&error, &input);
+
+        let target_signal = Array2::<f32>::from_shape_vec((1, 3), vec![
+            -1., 0., 1.,
+        ]).unwrap();
+
+        assert_eq!(error_signal, target_signal);
+
+        let target_weight_grads = Array2::<f32>::from_shape_vec((1, 3), vec![
+            -1., -2., -3.,
+        ]).unwrap();
+        let target_bias_grads = Array2::<f32>::from_shape_vec((1, 1), vec![
+            -1.,
+        ]).unwrap();
+
+        assert_eq!(linear.weights.gradients, target_weight_grads);
+        assert_eq!(linear.bias.gradients, target_bias_grads);
     }
 }

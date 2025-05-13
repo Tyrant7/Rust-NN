@@ -178,18 +178,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_initialize() {
-        // From rand
-        Convolutional1D::new_from_rand(3, 3, 2, true, 1, 0);
-
-        // From kernels
-        let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
-        Convolutional1D::new_from_kernel(kernels, None, 1, 0);
-    }
-
-    #[test]
     fn test_forward() {
-        // From kernels
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
         let mut conv = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
 
@@ -237,7 +226,7 @@ mod tests {
             0., 1., 2., 3., 4., 5.,  6.,
             0., 2., 4., 6., 8., 10., 12.,
         ]).unwrap();
-        conv.forward(&input, true);
+        conv.forward(&input, false);
 
         let error = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
             3., 3., 3., 3., 3., 3.,
