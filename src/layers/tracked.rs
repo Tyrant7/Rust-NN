@@ -52,13 +52,3 @@ where
         self.inner.get_learnable_parameters()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test() {
-        unimplemented!()
-    }
-}
