@@ -90,3 +90,24 @@ pub mod relu;
 pub use relu::ReLU;
 pub mod sigmoid;
 pub use sigmoid::Sigmoid;
+
+#[macro_export]
+macro_rules! test_activation_fn {
+    ($type:expr, $input:expr, $expected_out:expr, $error:expr, $expected_err:expr) => {
+        let mut activation = $type;
+        
+        let input = Array1::<f32>::from_shape_vec($input.len(), $input).unwrap().into_dyn();
+        let output = activation.forward(&input, false);
+
+        let target = Array1::<f32>::from_shape_vec($expected_out.len(), $expected_out).unwrap().into_dyn();
+
+        assert_eq!(output, target);
+
+        let error = Array1::<f32>::from_shape_vec($error.len(), $error).unwrap().into_dyn();
+        let error_signal = activation.backward(&error, &input);
+
+        let target_signal = Array1::<f32>::from_shape_vec($expected_err.len(), $expected_err).unwrap().into_dyn();
+
+        assert_eq!(error_signal, target_signal);
+    };
+}
