@@ -29,14 +29,13 @@ impl RawLayer for Sigmoid {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_activation_fn;
-    use ndarray::Array1;
+    use crate::layers::tests::test_activation_fn;
 
     use super::*;
 
     #[test]
     fn test() {
-        test_activation_fn!(Sigmoid, 
+        test_activation_fn(Sigmoid, 
             vec![-1., 0., 1.,],
             vec![0.268941, 0.5, 0.731059,],
             vec![-1., 0., 1.,],

@@ -92,30 +92,35 @@ pub mod sigmoid;
 pub use sigmoid::Sigmoid;
 
 #[cfg(test)]
-#[macro_export]
-macro_rules! test_activation_fn {
-    ($type:expr, $input:expr, $expected_out:expr, $error:expr, $expected_err:expr) => {
+pub mod tests {
+    use ndarray::{Array1, Dim, IxDyn, IxDynImpl};
+
+    use super::RawLayer;
+
+    pub fn test_activation_fn<T>(mut activation: T, input: Vec<f32>, expected_out: Vec<f32>, error: Vec<f32>, expected_err: Vec<f32>)
+    where 
+        T: RawLayer<Input = Dim<IxDynImpl>, Output = Dim<IxDynImpl>>
+    {
         let epsilon = 1e-5;
-        let mut activation = $type;
         
-        let input = Array1::<f32>::from_shape_vec($input.len(), $input).unwrap().into_dyn();
+        let input = Array1::<f32>::from_shape_vec(input.len(), input).unwrap().into_dyn();
         let output = activation.forward(&input, false);
 
-        let target = Array1::<f32>::from_shape_vec($expected_out.len(), $expected_out).unwrap().into_dyn();
+        let target = Array1::<f32>::from_shape_vec(expected_out.len(), expected_out).unwrap().into_dyn();
 
         for (o, t) in output.iter().zip(target.iter()) {
             let diff = (*o - *t).abs();
             assert!(diff <= epsilon);
         }
 
-        let error = Array1::<f32>::from_shape_vec($error.len(), $error).unwrap().into_dyn();
+        let error = Array1::<f32>::from_shape_vec(error.len(), error).unwrap().into_dyn();
         let error_signal = activation.backward(&error, &input);
 
-        let target_signal = Array1::<f32>::from_shape_vec($expected_err.len(), $expected_err).unwrap().into_dyn();
+        let target_signal = Array1::<f32>::from_shape_vec(expected_err.len(), expected_err).unwrap().into_dyn();
 
         for (e, t) in error_signal.iter().zip(target_signal.iter()) {
             let diff = (*e - *t).abs();
             assert!(diff <= epsilon);
         }
-    };
+    }
 }

@@ -21,14 +21,13 @@ impl RawLayer for ReLU {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_activation_fn;
-    use ndarray::Array1;
+    use crate::layers::tests::test_activation_fn;
 
     use super::*;
 
     #[test]
     fn test() {
-        test_activation_fn!(ReLU, 
+        test_activation_fn(ReLU, 
             vec![-1., 0., 1.,],
             vec![0., 0., 1.,],
             vec![-1., 0., 1.,],
