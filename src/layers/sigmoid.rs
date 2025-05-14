@@ -34,7 +34,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn sigmoid() {
         test_activation_fn(Sigmoid, 
             vec![-1., 0., 1.,],
             vec![0.268941, 0.5, 0.731059,],

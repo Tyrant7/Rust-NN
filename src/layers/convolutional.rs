@@ -178,7 +178,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_forward() {
+    fn forward() {
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
         let mut conv = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
 
@@ -197,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn test_forward_stride_and_padding() {
+    fn forward_stride_and_padding() {
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
         let biases = Array1::from_elem(2, 1.);
 
@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn test_backward() {
+    fn backward() {
         let kernels = Array3::from_elem((2, 2, 2), 1.);
         let mut conv = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
     
@@ -252,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn test_backward_stride_and_padding() {
+    fn backward_stride_and_padding() {
         // TODO: Also with bias
     }
 }

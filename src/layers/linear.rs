@@ -80,7 +80,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_forward() {
+    fn forward() {
         let weights = Array2::from_shape_vec((2, 3), vec![
             1., 0., -1.,
             0., 1., 2.,
@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn test_backward() {
+    fn backward() {
         let weights = Array2::from_shape_vec((1, 3), vec![
             1., 0., -1.,
         ]).unwrap();

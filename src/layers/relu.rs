@@ -26,7 +26,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn relu() {
         test_activation_fn(ReLU, 
             vec![-1., 0., 1.,],
             vec![0., 0., 1.,],
