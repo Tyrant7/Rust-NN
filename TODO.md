@@ -26,9 +26,7 @@
 ## Other features:
 
 -   Gradient clipping
--   Pretty model and layer printouts
--   Finish tests for all features and layer types
-    -   Figure out how tests should actually work
+-   Pretty layer printouts
 -   Additional sample problems, harder than XOR
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
