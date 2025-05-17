@@ -8,6 +8,7 @@
 
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
+-   More safety assertions throughout codebase, especially within layers
 -   Pooling layers
     -   Min pooling
     -   Max pooling
