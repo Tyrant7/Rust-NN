@@ -121,7 +121,12 @@ impl RawLayer for Convolutional1D {
             }
         }
 
-        // TODO: Compute bias gradients
+        // Compute bias gradients
+        if let Some(bias) = &mut self.bias { 
+            for out_f in 0..out_features {
+                bias.gradients[out_f] += delta.slice(s![.., out_f, ..]).sum();
+            }
+        }
 
         // Compute loss signal for backpropagation
         let mut error_signal = Array3::zeros(forward_input.dim());
@@ -220,7 +225,8 @@ mod tests {
     #[test]
     fn backward() {
         let kernels = Array3::from_elem((2, 2, 2), 1.);
-        let mut conv = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
+        let bias = Array1::ones(2);
+        let mut conv = Convolutional1D::new_from_kernel(kernels, Some(bias), 1, 0);
     
         let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
             0., 1., 2., 3., 4., 5.,  6.,
@@ -238,7 +244,6 @@ mod tests {
             3., 6., 6., 6., 6., 6., 3.,
             3., 6., 6., 6., 6., 6., 3.,
         ]).unwrap();
-
         assert_eq!(error_signal, target_signal);
 
         let target_grads = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
@@ -247,12 +252,16 @@ mod tests {
             0., 0., 
             0., 0.,
         ]).unwrap();
-
         assert_eq!(conv.kernels.gradients, target_grads);
+
+        let target_b_grads = Array1::<f32>::from_shape_vec(2, vec![
+            18., 0.,
+        ]).unwrap();
+        assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
     }
 
     #[test]
     fn backward_stride_and_padding() {
-        // TODO: Also with bias
+        // TODO
     }
 }
