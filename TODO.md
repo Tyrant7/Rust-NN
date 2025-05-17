@@ -2,7 +2,7 @@
 
 ## Currently working on:
 
--
+-   2D convolutional layers
 
 ## Next up:
 
@@ -15,7 +15,6 @@
 
 ## Layer types:
 
--   2D convolutional layers
 -   3D convolutional layers
 -   Batch norm
 -   RNN support
@@ -31,3 +30,4 @@
 -   Helper modules for things like Softmax
 -   Helpers for dataloading and data management
 -   CPU multithreading
+-   Full docstrings complete with examples for entire API
