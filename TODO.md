@@ -2,9 +2,7 @@
 
 ## Currently working on:
 
--   Finish up and organize unit tests for currently implemented features
-    -   Also put unit tests in files with their code, as per the Rust best practices
--   Finish Conv1D bias backprop implementation
+-
 
 ## Next up:
 

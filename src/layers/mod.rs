@@ -86,6 +86,9 @@ pub use dropout::Dropout;
 pub mod convolutional;
 pub use convolutional::Convolutional1D;
 
+pub mod flatten;
+pub use flatten::Flatten;
+
 pub mod relu;
 pub use relu::ReLU;
 pub mod sigmoid;

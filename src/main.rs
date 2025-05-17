@@ -3,6 +3,7 @@
 
 use layers::chain;
 use layers::CompositeLayer;
+use layers::Flatten;
 use layers::Tracked;
 use ndarray::ArrayD;
 use ndarray::{Array2, Array3};
@@ -37,6 +38,7 @@ fn main() {
         // Dropout::new(0.5, 5), 
         Linear::new_from_rand(16, 1),
         Sigmoid,
+        Flatten::new(0),
     );
 
     let data = [
