@@ -215,9 +215,9 @@ mod tests {
         ]).unwrap();
         let output = conv.forward(&input, false);
         
-        let target = Array3::from_shape_vec((1, 2, 4), vec![
-            1_f32, -5., -13., -17.,
-            1.,    -2.,  -6.,  -8.,
+        let target = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
+            1.,-5.,-13.,-17.,
+            1.,-2., -6., -8.,
         ]).unwrap();
 
         assert_eq!(output, target);
