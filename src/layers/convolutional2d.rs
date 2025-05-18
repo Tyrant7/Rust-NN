@@ -1,0 +1,301 @@
+use rand::Rng;
+use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
+
+use super::{RawLayer, LearnableParameter, ParameterGroup};
+
+#[derive(Debug)]
+pub struct Convolutional2D {
+    kernels: ParameterGroup<Ix4>,
+    bias: Option<ParameterGroup<Ix1>>,
+
+    stride: (usize, usize),
+    padding: (usize, usize),
+}
+
+impl Convolutional2D {
+    /// Pairs will follow order of (x, y)
+    pub fn new_from_rand(
+        in_features: usize, 
+        out_features: usize, 
+        kernel_size: (usize, usize), 
+        use_bias: bool,
+        stride: (usize, usize), 
+        padding: (usize, usize),
+    ) -> Self {
+        let mut rng = rand::rng();
+
+        // Swapping the dimensions here for (height, width)
+        let kernels = Array4::from_shape_fn((out_features, in_features, kernel_size.1, kernel_size.0), 
+            |_| rng.random_range(-1.0..1.)
+        );
+        let bias = match use_bias {
+            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
+            false => None,
+        };
+        
+        Convolutional2D::new_from_kernels(kernels, bias, stride, padding)
+    }
+
+    pub fn new_from_kernels(
+        kernels: Array4<f32>, 
+        bias: Option<Array1<f32>>,
+        stride: (usize, usize), 
+        padding: (usize, usize),
+    ) -> Self {
+        let kernels = ParameterGroup::new(kernels);
+        let bias = bias.map(ParameterGroup::new);
+        Convolutional2D { 
+            kernels, 
+            bias, 
+            stride, 
+            padding 
+        }
+    }
+}
+
+impl RawLayer for Convolutional2D {
+    type Input = Ix4;
+    type Output = Ix4;
+
+    /// Expected input shape: (batch_size, features, height, width)
+    fn forward(&mut self, input: &Array4<f32>, _train: bool) -> Array4<f32> {
+        let (batch_size, in_features, height, width) = input.dim();
+
+        // Pad the input
+        // (batch_size, in_features, height, width)
+        let input = {
+            if self.padding.0 > 0 || self.padding.1 > 0 {
+                let mut padded = Array4::zeros(
+                    (batch_size, in_features, height + self.padding.1 * 2, width + self.padding.0 * 2)
+                );
+                padded.slice_mut(
+                    s![0..batch_size, 0..in_features, (self.padding.1)..height + self.padding.1, (self.padding.0)..width + self.padding.0]
+                ).assign(input);
+                padded
+            } else {
+                input.to_owned()
+            }
+        };
+
+        // 1D convolution
+        let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
+        let output_width = ((width - kernel_width + (2 * self.padding.0)) / self.stride.0) + 1;
+        let output_height = ((height - kernel_height + (2 * self.padding.1)) / self.stride.1) + 1;
+        let mut output = Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
+        for b in 0..batch_size {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
+                    let input_slice = input.slice(s![b, in_f, .., ..]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, .., ..]);
+
+                    let conv = convolve2d(input_slice, kernel_slice, (output_height, output_width), self.stride);
+
+                    output
+                        .slice_mut(s![b, out_f, .., ..])
+                        .scaled_add(1., &conv);
+                }
+            }
+        }
+
+        // Apply bias to the second dimension (features)
+        if let Some(b) = &self.bias {
+            output += &b.values.view()
+                .insert_axis(Axis(0))
+                .insert_axis(Axis(2))
+                .broadcast(output.dim())
+                .unwrap();
+        }
+        output
+    }
+
+    fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
+        delta.clone()
+
+        // let (batch_size, in_features, _) = forward_input.dim();
+        // let (out_features, _, _) = self.kernels.values.dim();
+
+        // // Compute kernel gradients
+        // for b in 0..batch_size {
+        //     for out_f in 0..out_features {
+        //         for in_f in 0..in_features {
+        //             // Align error slice with input slice
+        //             let input_slice = forward_input.slice(s![b, in_f, ..]);
+        //             let error_slice = delta.slice(s![b, out_f, ..]);
+
+        //             // 1D convolution
+        //             let grad = convolve1d(input_slice, error_slice, self.stride);
+        //             self.kernels.gradients
+        //                 .slice_mut(s![out_f, in_f, ..])
+        //                 .scaled_add(1., &grad);
+        //         }
+        //     }
+        // }
+
+        // // Compute bias gradients
+        // if let Some(bias) = &mut self.bias { 
+        //     for out_f in 0..out_features {
+        //         bias.gradients[out_f] += delta.slice(s![.., out_f, ..]).sum();
+        //     }
+        // }
+
+        // // Compute loss signal for backpropagation
+        // let mut error_signal = Array3::zeros(forward_input.dim());
+        // for b in 0..batch_size {
+        //     for out_f in 0..out_features {
+        //         for in_f in 0..in_features {
+        //             let delta_slice = delta.slice(s![b, out_f, ..]);
+
+        //             // Flip over width dimension (180 rotation)
+        //             let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
+
+        //             let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
+        //             let conv = convolve1d(padded.view(), kernel_slice, self.stride);
+        //             error_signal
+        //                 .slice_mut(s![b, in_f, ..])
+        //                 .scaled_add(1., &conv);
+        //         }
+        //     }
+        // }
+        // error_signal
+    }
+
+    fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
+        let mut params = vec![self.kernels.as_learnable_parameter()];
+        if let Some(bias) = &mut self.bias {
+            params.push(bias.as_learnable_parameter());
+        }
+        params
+    }
+}
+
+/*
+fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
+    assert!(padding > 0);
+
+    let mut padded = Array1::zeros(input.dim() + padding * 2);
+    padded
+        .slice_mut(s![padding..input.dim() + padding])
+        .assign(input);
+    padded
+}
+*/
+
+/// output_size: (height, width)
+fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usize, usize), stride: (usize, usize)) -> Array2<f32> {
+    let mut output = Array2::zeros(output_size);
+    let windows = input.windows_with_stride(kernel.dim(), stride);
+    for (i, window) in windows.into_iter().enumerate() {
+        let (x, y) = (i % output_size.1, i / output_size.1); 
+        output[[y, x]] += (&window * &kernel).sum();
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn forward() {
+        let kernels = Array4::from_shape_vec((2, 2, 2, 2), vec![
+            1., 1.,
+            1., 1.,
+
+            1., 1.,
+            1., 1.,
+
+            1., 1.,
+            1., 1.,
+
+            1., 1.,
+            1., 1.,
+        ]);
+        let mut conv = Convolutional2D::new_from_kernels(kernels, None, (1, 1), (0, 0));
+
+        let input = Array4::<f32>::from_shape_vec((1, 2, 3, 3), vec![
+            // Feature 1
+            0., 1., 2., 
+            3., 4., 5., 
+            6., 7., 8.,
+
+            // Feature 2
+            0., 2., 4., 
+            6., 8., 10., 
+            12.,14.,16.,
+        ]).unwrap();
+        let output = conv.forward(&input, false);
+        
+        println!("{output}");
+        
+        // let target = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
+        //     3.,  9., 15., 21., 27., 33.,
+        //     6., 18., 30., 42., 54., 66.,
+        // ]).unwrap();
+        
+        // assert_eq!(output, target);
+    }
+
+    #[test]
+    fn forward_stride_and_padding() {
+        let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
+        let biases = Array1::from_elem(2, 1.);
+
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 2, 1);
+    
+        let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+            0., 1., 2., 3., 4., 5., 8.,
+            0.,-2.,-4.,-6.,-8.,-10.,-12.,
+        ]).unwrap();
+        let output = conv.forward(&input, false);
+        
+        let target = Array3::from_shape_vec((1, 2, 4), vec![
+            1_f32, -5., -13., -17.,
+            1.,    -2.,  -6.,  -8.,
+        ]).unwrap();
+
+        assert_eq!(output, target);
+    }
+
+    #[test]
+    fn backward() {
+        let kernels = Array3::from_elem((2, 2, 2), 1.);
+        let bias = Array1::ones(2);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(bias), 1, 0);
+    
+        let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+            0., 1., 2., 3., 4., 5.,  6.,
+            0., 2., 4., 6., 8., 10., 12.,
+        ]).unwrap();
+        conv.forward(&input, false);
+
+        let error = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
+            3., 3., 3., 3., 3., 3.,
+            0., 0., 0., 0., 0., 0.,
+        ]).unwrap();
+        let error_signal = conv.backward(&error, &input);
+
+        let target_signal = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+            3., 6., 6., 6., 6., 6., 3.,
+            3., 6., 6., 6., 6., 6., 3.,
+        ]).unwrap();
+        assert_eq!(error_signal, target_signal);
+
+        let target_grads = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
+            45., 63., 
+            90., 126., 
+            0., 0., 
+            0., 0.,
+        ]).unwrap();
+        assert_eq!(conv.kernels.gradients, target_grads);
+
+        let target_b_grads = Array1::<f32>::from_shape_vec(2, vec![
+            18., 0.,
+        ]).unwrap();
+        assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
+    }
+
+    #[test]
+    fn backward_stride_and_padding() {
+        // TODO
+    }
+}

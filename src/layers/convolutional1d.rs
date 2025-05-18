@@ -1,11 +1,10 @@
 use rand::Rng;
-use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix3};
+use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
-pub struct Convolutional1D
-{
+pub struct Convolutional1D {
     kernels: ParameterGroup<Ix3>,
     bias: Option<ParameterGroup<Ix1>>,
 
@@ -24,17 +23,18 @@ impl Convolutional1D {
     ) -> Self {
         let mut rng = rand::rng();
 
-        // let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| rng.random_range(-1.0..1.));
-        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 1.);
+        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 
+            rng.random_range(-1.0..1.)
+        );
         let bias = match use_bias {
             true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
             false => None,
         };
         
-        Convolutional1D::new_from_kernel(kernels, bias, stride, padding)
+        Convolutional1D::new_from_kernels(kernels, bias, stride, padding)
     }
 
-    pub fn new_from_kernel(
+    pub fn new_from_kernels(
         kernels: Array3<f32>, 
         bias: Option<Array1<f32>>,
         stride: usize, 
@@ -55,6 +55,7 @@ impl RawLayer for Convolutional1D {
     type Input = Ix3;
     type Output = Ix3;
     
+    /// Expected input shape: (batch_size, features, width)
     fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
 
@@ -185,7 +186,7 @@ mod tests {
     #[test]
     fn forward() {
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
-        let mut conv = Convolutional1D::new_from_kernel(kernels, None, 1, 0);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, None, 1, 0);
 
         let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
             0., 1., 2., 3., 4., 5., 6.,
@@ -206,7 +207,7 @@ mod tests {
         let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
         let biases = Array1::from_elem(2, 1.);
 
-        let mut conv = Convolutional1D::new_from_kernel(kernels, Some(biases), 2, 1);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 2, 1);
     
         let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
             0., 1., 2., 3., 4., 5., 8.,
@@ -226,7 +227,7 @@ mod tests {
     fn backward() {
         let kernels = Array3::from_elem((2, 2, 2), 1.);
         let bias = Array1::ones(2);
-        let mut conv = Convolutional1D::new_from_kernel(kernels, Some(bias), 1, 0);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(bias), 1, 0);
     
         let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
             0., 1., 2., 3., 4., 5.,  6.,

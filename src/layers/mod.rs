@@ -83,8 +83,11 @@ pub use linear::Linear;
 pub mod dropout;
 pub use dropout::Dropout;
 
-pub mod convolutional;
-pub use convolutional::Convolutional1D;
+pub mod convolutional1d;
+pub use convolutional1d::Convolutional1D;
+
+pub mod convolutional2d;
+pub use convolutional2d::Convolutional2D;
 
 pub mod flatten;
 pub use flatten::Flatten;
