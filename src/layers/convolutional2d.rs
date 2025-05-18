@@ -13,7 +13,7 @@ pub struct Convolutional2D {
 }
 
 impl Convolutional2D {
-    /// Pairs will follow order of (x, y)
+    /// Pairs will follow order of (height, width)
     pub fn new_from_rand(
         in_features: usize, 
         out_features: usize, 
@@ -24,8 +24,7 @@ impl Convolutional2D {
     ) -> Self {
         let mut rng = rand::rng();
 
-        // Swapping the dimensions here for (height, width)
-        let kernels = Array4::from_shape_fn((out_features, in_features, kernel_size.1, kernel_size.0), 
+        let kernels = Array4::from_shape_fn((out_features, in_features, kernel_size.0, kernel_size.1), 
             |_| rng.random_range(-1.0..1.)
         );
         let bias = match use_bias {
@@ -36,7 +35,7 @@ impl Convolutional2D {
         Convolutional2D::new_from_kernels(kernels, bias, stride, padding)
     }
 
-    /// Stride and padding will follow order of (x, y)
+    /// Stride and padding will follow order of (height, width)
     pub fn new_from_kernels(
         kernels: Array4<f32>, 
         bias: Option<Array1<f32>>,
@@ -67,10 +66,10 @@ impl RawLayer for Convolutional2D {
         let input = {
             if self.padding.0 > 0 || self.padding.1 > 0 {
                 let mut padded = Array4::zeros(
-                    (batch_size, in_features, height + self.padding.1 * 2, width + self.padding.0 * 2)
+                    (batch_size, in_features, height + self.padding.0 * 2, width + self.padding.1 * 2)
                 );
                 padded.slice_mut(
-                    s![0..batch_size, 0..in_features, (self.padding.1)..height + self.padding.1, (self.padding.0)..width + self.padding.0]
+                    s![0..batch_size, 0..in_features, (self.padding.0)..height + self.padding.0, (self.padding.1)..width + self.padding.1]
                 ).assign(input);
                 padded
             } else {
@@ -80,8 +79,8 @@ impl RawLayer for Convolutional2D {
 
         // 1D convolution
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
-        let output_width = ((width - kernel_width + (2 * self.padding.0)) / self.stride.0) + 1;
-        let output_height = ((height - kernel_height + (2 * self.padding.1)) / self.stride.1) + 1;
+        let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
+        let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
         let mut output = Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
@@ -93,7 +92,7 @@ impl RawLayer for Convolutional2D {
                         input_slice, 
                         kernel_slice, 
                         (output_height, output_width), 
-                        (self.stride.1, self.stride.0)
+                        self.stride
                     );
 
                     output
@@ -262,7 +261,7 @@ mod tests {
            -1., 1.,
         ]).unwrap();
         let biases = Array1::from_elem(1, 1.);
-        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (2, 1), (1, 0));
+        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (1, 2), (0, 1));
 
         let input = Array4::<f32>::from_shape_vec((1, 2, 3, 4), vec![
             // Feature 1
@@ -363,7 +362,7 @@ mod tests {
            -1., 1.,
         ]).unwrap();
         let biases = Array1::from_elem(1, 1.);
-        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (2, 1), (1, 0));
+        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (1, 2), (0, 1));
 
         let input = Array4::<f32>::from_shape_vec((1, 2, 3, 4), vec![
             // Feature 1

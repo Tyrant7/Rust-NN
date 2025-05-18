@@ -2,18 +2,16 @@
 
 ## Currently working on:
 
--   Finish up convolutional2d unit test for backward + stride + padding
-
-## Next up:
-
 -   Pooling layers
     -   Min pooling
     -   Max pooling
     -   Avg pooling
+
+## Next up:
+
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   More safety assertions throughout codebase, especially within layers
--   Switch up convolutional2d input parameters to match standard of rest of codebase => (height, width)
 
 ## Layer types:
 
@@ -33,3 +31,8 @@
 -   Helpers for dataloading and data management
 -   CPU multithreading
 -   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+
+## Fixes
+
+-   Make sure convolutional layers work with smaller sizes (may need to crop output dimensions on backward pass if full convolution
+    on output shape does not line up with input)
