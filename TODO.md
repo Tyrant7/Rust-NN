@@ -2,7 +2,7 @@
 
 ## Currently working on:
 
--   2D convolutional layers
+-   Finish up convolutional unit tests for backward + stride + padding
 
 ## Next up:
 
@@ -31,4 +31,4 @@
 -   Helper modules for things like Softmax
 -   Helpers for dataloading and data management
 -   CPU multithreading
--   Full docstrings complete with examples for entire API
+-   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
