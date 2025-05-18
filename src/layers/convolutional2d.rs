@@ -197,19 +197,24 @@ mod tests {
 
     #[test]
     fn forward() {
+        // (out_features, in_features, height, width)
         let kernels = Array4::from_shape_vec((2, 2, 2, 2), vec![
+            // out 1, in 1
             1., 1.,
             1., 1.,
 
+            // out 1, in 2
+            1., 2.,
+           -1., 1.,
+
+            // out 2, in 1
             1., 1.,
             1., 1.,
 
-            1., 1.,
-            1., 1.,
-
-            1., 1.,
-            1., 1.,
-        ]);
+            // out 2, in 2
+            2., 1.,
+            1., 2.,
+        ]).unwrap();
         let mut conv = Convolutional2D::new_from_kernels(kernels, None, (1, 1), (0, 0));
 
         let input = Array4::<f32>::from_shape_vec((1, 2, 3, 3), vec![
@@ -225,77 +230,80 @@ mod tests {
         ]).unwrap();
         let output = conv.forward(&input, false);
         
-        println!("{output}");
-        
-        // let target = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
-        //     3.,  9., 15., 21., 27., 33.,
-        //     6., 18., 30., 42., 54., 66.,
-        // ]).unwrap();
-        
-        // assert_eq!(output, target);
-    }
+        let target = Array4::<f32>::from_shape_vec((1, 2, 2, 2), vec![
+            // Feature 1
+            14., 24., 
+            44., 54.,
 
-    #[test]
-    fn forward_stride_and_padding() {
-        let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
-        let biases = Array1::from_elem(2, 1.);
-
-        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 2, 1);
-    
-        let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
-            0., 1., 2., 3., 4., 5., 8.,
-            0.,-2.,-4.,-6.,-8.,-10.,-12.,
+            // Feature 2
+            32., 48.,
+            80., 96.,
         ]).unwrap();
-        let output = conv.forward(&input, false);
         
-        let target = Array3::from_shape_vec((1, 2, 4), vec![
-            1_f32, -5., -13., -17.,
-            1.,    -2.,  -6.,  -8.,
-        ]).unwrap();
-
         assert_eq!(output, target);
     }
 
-    #[test]
-    fn backward() {
-        let kernels = Array3::from_elem((2, 2, 2), 1.);
-        let bias = Array1::ones(2);
-        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(bias), 1, 0);
+    // #[test]
+    // fn forward_stride_and_padding() {
+    //     let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
+    //     let biases = Array1::from_elem(2, 1.);
+
+    //     let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 2, 1);
     
-        let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
-            0., 1., 2., 3., 4., 5.,  6.,
-            0., 2., 4., 6., 8., 10., 12.,
-        ]).unwrap();
-        conv.forward(&input, false);
+    //     let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+    //         0., 1., 2., 3., 4., 5., 8.,
+    //         0.,-2.,-4.,-6.,-8.,-10.,-12.,
+    //     ]).unwrap();
+    //     let output = conv.forward(&input, false);
+        
+    //     let target = Array3::from_shape_vec((1, 2, 4), vec![
+    //         1_f32, -5., -13., -17.,
+    //         1.,    -2.,  -6.,  -8.,
+    //     ]).unwrap();
 
-        let error = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
-            3., 3., 3., 3., 3., 3.,
-            0., 0., 0., 0., 0., 0.,
-        ]).unwrap();
-        let error_signal = conv.backward(&error, &input);
+    //     assert_eq!(output, target);
+    // }
 
-        let target_signal = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
-            3., 6., 6., 6., 6., 6., 3.,
-            3., 6., 6., 6., 6., 6., 3.,
-        ]).unwrap();
-        assert_eq!(error_signal, target_signal);
+    // #[test]
+    // fn backward() {
+    //     let kernels = Array3::from_elem((2, 2, 2), 1.);
+    //     let bias = Array1::ones(2);
+    //     let mut conv = Convolutional1D::new_from_kernels(kernels, Some(bias), 1, 0);
+    
+    //     let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+    //         0., 1., 2., 3., 4., 5.,  6.,
+    //         0., 2., 4., 6., 8., 10., 12.,
+    //     ]).unwrap();
+    //     conv.forward(&input, false);
 
-        let target_grads = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
-            45., 63., 
-            90., 126., 
-            0., 0., 
-            0., 0.,
-        ]).unwrap();
-        assert_eq!(conv.kernels.gradients, target_grads);
+    //     let error = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
+    //         3., 3., 3., 3., 3., 3.,
+    //         0., 0., 0., 0., 0., 0.,
+    //     ]).unwrap();
+    //     let error_signal = conv.backward(&error, &input);
 
-        let target_b_grads = Array1::<f32>::from_shape_vec(2, vec![
-            18., 0.,
-        ]).unwrap();
-        assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
-    }
+    //     let target_signal = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
+    //         3., 6., 6., 6., 6., 6., 3.,
+    //         3., 6., 6., 6., 6., 6., 3.,
+    //     ]).unwrap();
+    //     assert_eq!(error_signal, target_signal);
 
-    #[test]
-    fn backward_stride_and_padding() {
-        // TODO
-    }
+    //     let target_grads = Array3::<f32>::from_shape_vec((2, 2, 2), vec![
+    //         45., 63., 
+    //         90., 126., 
+    //         0., 0., 
+    //         0., 0.,
+    //     ]).unwrap();
+    //     assert_eq!(conv.kernels.gradients, target_grads);
+
+    //     let target_b_grads = Array1::<f32>::from_shape_vec(2, vec![
+    //         18., 0.,
+    //     ]).unwrap();
+    //     assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
+    // }
+
+    // #[test]
+    // fn backward_stride_and_padding() {
+    //     // TODO
+    // }
 }
