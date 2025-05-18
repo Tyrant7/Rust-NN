@@ -196,8 +196,6 @@ fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usi
 
 #[cfg(test)]
 mod tests {
-    use std::io::BufRead;
-
     use super::*;
 
     #[test]
