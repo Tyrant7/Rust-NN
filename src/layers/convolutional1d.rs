@@ -72,8 +72,8 @@ impl RawLayer for Convolutional1D {
         };
 
         // 1D convolution
-        let (out_features, _, kernel_size) = self.kernels.values.dim();
-        let output_width = ((width - kernel_size + (2 * self.padding)) / self.stride) + 1;
+        let (out_features, _, kernel_width) = self.kernels.values.dim();
+        let output_width = ((width - kernel_width + (2 * self.padding)) / self.stride) + 1;
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
@@ -102,8 +102,8 @@ impl RawLayer for Convolutional1D {
     }
 
     fn backward(&mut self, delta: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
-        let (batch_size, in_features, _) = forward_input.dim();
-        let (out_features, _, _) = self.kernels.values.dim();
+        let (batch_size, in_features, input_width) = forward_input.dim();
+        let (out_features, _, kernel_width) = self.kernels.values.dim();
 
         // Compute kernel gradients
         for b in 0..batch_size {
@@ -113,8 +113,14 @@ impl RawLayer for Convolutional1D {
                     let input_slice = forward_input.slice(s![b, in_f, ..]);
                     let error_slice = delta.slice(s![b, out_f, ..]);
 
-                    // 1D convolution
-                    let grad = convolve1d(input_slice, error_slice, 1);
+                    // In some cases, the loss may actually be larger than the input due to padding
+                    // In these cases, we can swap the kernel and input to achieve the desired result
+                    // without causing a shape error
+                    let grad = if error_slice.dim() < input_slice.dim() {
+                        convolve1d(input_slice, error_slice, 1)
+                    } else {
+                        convolve1d(error_slice, input_slice, 1)
+                    };
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, ..])
                         .scaled_add(1., &grad);
@@ -130,7 +136,9 @@ impl RawLayer for Convolutional1D {
         }
 
         // Compute loss signal for backpropagation
-        let mut error_signal = Array3::zeros(forward_input.dim());
+        let output_width = ((input_width - kernel_width + (2 * self.padding)) / self.stride) + 1;
+        let signal_width = output_width + kernel_width - 1;
+        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
@@ -147,7 +155,15 @@ impl RawLayer for Convolutional1D {
                 }
             }
         }
-        error_signal
+
+        // We need to crop the error signal to account for the padding added during the forward pass.
+        // In the case padding was added there will be extra error values mapping to those positions, 
+        // however they are not important for calculating the previous layer's error since they were
+        // added to the data by this layer during the forward pass
+        let crop = signal_width - input_width;
+        let left = crop / 2;
+        let right = crop - left;
+        error_signal.slice(s![.., .., left..signal_width - right]).to_owned()
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
@@ -259,6 +275,34 @@ mod tests {
             18., 0.,
         ]).unwrap();
         assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
+    }
+
+    #[test]
+    fn backward_padding() {
+        let kernels = Array3::from_shape_vec((1, 1, 2), vec![
+            1., 1.,
+        ]).unwrap();
+        let mut conv = Convolutional1D::new_from_kernels(kernels, None, 1, 1);
+    
+        let input = Array3::<f32>::from_shape_vec((1, 1, 2), vec![
+            0., 1.,
+        ]).unwrap();
+        conv.forward(&input, false);
+
+        let error = Array3::<f32>::from_shape_vec((1, 1, 3), vec![
+            1., 2., 1.,
+        ]).unwrap();
+        let error_signal = conv.backward(&error, &input);
+
+        let target_signal = Array3::<f32>::from_shape_vec((1, 1, 2), vec![
+            3., 3.,
+        ]).unwrap();
+        assert_eq!(error_signal, target_signal);
+
+        let target_grads = Array3::<f32>::from_shape_vec((1, 1, 2), vec![
+            2., 1.,
+        ]).unwrap();
+        assert_eq!(conv.kernels.gradients, target_grads);
     }
 
     #[test]
