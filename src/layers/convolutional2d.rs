@@ -36,6 +36,7 @@ impl Convolutional2D {
         Convolutional2D::new_from_kernels(kernels, bias, stride, padding)
     }
 
+    /// Stride and padding will follow order of (x, y)
     pub fn new_from_kernels(
         kernels: Array4<f32>, 
         bias: Option<Array1<f32>>,
@@ -88,7 +89,12 @@ impl RawLayer for Convolutional2D {
                     let input_slice = input.slice(s![b, in_f, .., ..]);
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, .., ..]);
 
-                    let conv = convolve2d(input_slice, kernel_slice, (output_height, output_width), self.stride);
+                    let conv = convolve2d(
+                        input_slice, 
+                        kernel_slice, 
+                        (output_height, output_width), 
+                        (self.stride.1, self.stride.0)
+                    );
 
                     output
                         .slice_mut(s![b, out_f, .., ..])
@@ -180,7 +186,7 @@ fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
 }
 */
 
-/// output_size: (height, width)
+/// output_size and stride: (height, width)
 fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usize, usize), stride: (usize, usize)) -> Array2<f32> {
     let mut output = Array2::zeros(output_size);
     let windows = input.windows_with_stride(kernel.dim(), stride);
@@ -193,6 +199,8 @@ fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usi
 
 #[cfg(test)]
 mod tests {
+    use std::io::BufRead;
+
     use super::*;
 
     #[test]
@@ -243,26 +251,41 @@ mod tests {
         assert_eq!(output, target);
     }
 
-    // #[test]
-    // fn forward_stride_and_padding() {
-    //     let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 2. } else { 1. });
-    //     let biases = Array1::from_elem(2, 1.);
+    #[test]
+    fn forward_stride_and_padding() {
+        // (out_features, in_features, height, width)
+        let kernels = Array4::from_shape_vec((1, 2, 2, 2), vec![
+            // in 1
+            1., 1.,
+            1., 1.,
 
-    //     let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 2, 1);
-    
-    //     let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
-    //         0., 1., 2., 3., 4., 5., 8.,
-    //         0.,-2.,-4.,-6.,-8.,-10.,-12.,
-    //     ]).unwrap();
-    //     let output = conv.forward(&input, false);
+            // in 2
+            1., 2.,
+           -1., 1.,
+        ]).unwrap();
+        let biases = Array1::from_elem(1, 1.);
+        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (2, 1), (1, 0));
+
+        let input = Array4::<f32>::from_shape_vec((1, 2, 3, 4), vec![
+            // Feature 1
+            0., 1., 2., 3., 
+            4., 5., 6., 7., 
+            8., 9., 10.,11.,
+
+            // Feature 2
+            0., 2., 4., 6., 
+            8., 10.,12.,14.,
+            16.,18.,20.,22.,
+        ]).unwrap();
+        let output = conv.forward(&input, false);
         
-    //     let target = Array3::from_shape_vec((1, 2, 4), vec![
-    //         1_f32, -5., -13., -17.,
-    //         1.,    -2.,  -6.,  -8.,
-    //     ]).unwrap();
-
-    //     assert_eq!(output, target);
-    // }
+        let target = Array4::<f32>::from_shape_vec((1, 1, 2, 3), vec![
+            13., 27., 3.,
+            45., 67., 11.,
+        ]).unwrap();
+        
+        assert_eq!(output, target);
+    }
 
     // #[test]
     // fn backward() {
