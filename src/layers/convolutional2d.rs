@@ -127,7 +127,7 @@ impl RawLayer for Convolutional2D {
                     let error_slice = delta.slice(s![b, out_f, .., ..]);
 
                     // 1D convolution
-                    let grad = convolve2d(input_slice, error_slice, (kernel_height, kernel_width), self.stride);
+                    let grad = convolve2d(input_slice, error_slice, (kernel_height, kernel_width), (1, 1));
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, .., ..])
                         .scaled_add(1., &grad);
@@ -153,7 +153,7 @@ impl RawLayer for Convolutional2D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
 
                     let padded = pad_2d(&delta_slice, (kernel_height - 1, kernel_width - 1));
-                    let conv = convolve2d(padded.view(), kernel_slice, (error_height, error_width), self.stride);
+                    let conv = convolve2d(padded.view(), kernel_slice, (error_height, error_width), (1, 1));
                     error_signal
                         .slice_mut(s![b, in_f, .., ..])
                         .scaled_add(1., &conv);
@@ -334,11 +334,11 @@ mod tests {
         assert_eq!(error_signal, target_signal);
 
         let target_grads = Array4::<f32>::from_shape_vec((1, 2, 2, 2), vec![
-            // kernel for in 1
+            // Kernel for in 1
            -5., -4., 
            -2., -1., 
 
-           // kernel for in 2
+           // Kernel for in 2
            -10.,-8., 
            -4., -2.,
         ]).unwrap();

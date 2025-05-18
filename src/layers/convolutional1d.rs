@@ -114,7 +114,7 @@ impl RawLayer for Convolutional1D {
                     let error_slice = delta.slice(s![b, out_f, ..]);
 
                     // 1D convolution
-                    let grad = convolve1d(input_slice, error_slice, self.stride);
+                    let grad = convolve1d(input_slice, error_slice, 1);
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, ..])
                         .scaled_add(1., &grad);
@@ -140,7 +140,7 @@ impl RawLayer for Convolutional1D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
 
                     let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
-                    let conv = convolve1d(padded.view(), kernel_slice, self.stride);
+                    let conv = convolve1d(padded.view(), kernel_slice, 1);
                     error_signal
                         .slice_mut(s![b, in_f, ..])
                         .scaled_add(1., &conv);
@@ -263,6 +263,52 @@ mod tests {
 
     #[test]
     fn backward_stride_and_padding() {
-        // TODO
+        let kernels = Array3::from_shape_vec((1, 2, 2), vec![
+            // in 1
+            0., 1.,
+
+            // in 2
+            2.,-1.,
+        ]).unwrap();
+        let bias = Array1::ones(1);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(bias), 2, 1);
+    
+        let input = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
+            // Feature 1
+            0., 1., 2., 3.,
+
+            // Feature 2
+            0., 2., 4., 6.,
+        ]).unwrap();
+        conv.forward(&input, false);
+
+        let error = Array3::<f32>::from_shape_vec((1, 1, 3), vec![
+            // Feature 1
+            3., 3., -1.,
+        ]).unwrap();
+        let error_signal = conv.backward(&error, &input);
+
+        let target_signal = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
+            // Feature 1
+            0., 3., 3.,-1.,
+
+            // Feature 2
+            6., 3.,-5., 1.,
+        ]).unwrap();
+        assert_eq!(error_signal, target_signal);
+
+        let target_grads = Array3::<f32>::from_shape_vec((1, 2, 2), vec![
+            // Kernel for in 1
+            1., 6.,
+
+            // Kernel for in 2
+            2., 12.,
+        ]).unwrap();
+        assert_eq!(conv.kernels.gradients, target_grads);
+
+        let target_b_grads = Array1::<f32>::from_shape_vec(1, vec![
+            5.
+        ]).unwrap();
+        assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
     }
 }
