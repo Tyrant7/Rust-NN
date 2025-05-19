@@ -11,6 +11,9 @@ use ndarray::{Array2, Array3};
 use layers::Convolutional1D;
 use layers::RawLayer;
 
+pub mod helpers;
+pub use helpers::conv_helpers;
+
 //
 mod layers;
 use layers::Chain;

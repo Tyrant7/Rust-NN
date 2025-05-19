@@ -1,6 +1,8 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 
+use crate::conv_helpers::{convolve2d, pad_2d};
+
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
@@ -190,29 +192,6 @@ impl RawLayer for Convolutional2D {
         }
         params
     }
-}
-
-/// padding: (height, width)
-fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
-    let dim = input.dim();
-    let mut padded = Array2::zeros(
-        (dim.0 + padding.0 * 2, dim.1 + padding.1 * 2)
-    );
-    padded.slice_mut(
-        s![(padding.0)..dim.0 + padding.0, (padding.1)..dim.1 + padding.1]
-    ).assign(input);
-    padded
-}
-
-/// output_size and stride: (height, width)
-fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usize, usize), stride: (usize, usize)) -> Array2<f32> {
-    let mut output = Array2::zeros(output_size);
-    let windows = input.windows_with_stride(kernel.dim(), stride);
-    for (i, window) in windows.into_iter().enumerate() {
-        let (x, y) = (i % output_size.1, i / output_size.1); 
-        output[[y, x]] += (&window * &kernel).sum();
-    }
-    output
 }
 
 #[cfg(test)]

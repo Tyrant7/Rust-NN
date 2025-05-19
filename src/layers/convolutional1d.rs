@@ -1,6 +1,8 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 
+use crate::conv_helpers::{convolve1d, pad_1d};
+
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 #[derive(Debug)]
@@ -173,25 +175,6 @@ impl RawLayer for Convolutional1D {
         }
         params
     }
-}
-
-fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
-    assert!(padding > 0);
-
-    let mut padded = Array1::zeros(input.dim() + padding * 2);
-    padded
-        .slice_mut(s![padding..input.dim() + padding])
-        .assign(input);
-    padded
-}
-
-fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output_size: usize, stride: usize) -> Array1<f32> {
-    let mut output = Array1::zeros(output_size);
-    let windows = input.windows_with_stride(kernel.dim(), stride);
-    for (i, window) in windows.into_iter().enumerate() {
-        output[i] += (&window * &kernel).sum();
-    }
-    output
 }
 
 #[cfg(test)]
