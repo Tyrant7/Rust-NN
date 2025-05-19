@@ -16,14 +16,14 @@ impl Convolutional1D {
     pub fn new_from_rand(
         in_features: usize, 
         out_features: usize, 
-        kernel_size: usize, 
+        kernel_width: usize, 
         use_bias: bool,
         stride: usize, 
         padding: usize,
     ) -> Self {
         let mut rng = rand::rng();
 
-        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_size), |_| 
+        let kernels = Array3::from_shape_fn((out_features, in_features, kernel_width), |_| 
             rng.random_range(-1.0..1.)
         );
         let bias = match use_bias {
