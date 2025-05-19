@@ -77,7 +77,7 @@ impl RawLayer for Convolutional2D {
             }
         };
 
-        // 1D convolution
+        // 2D convolution
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;

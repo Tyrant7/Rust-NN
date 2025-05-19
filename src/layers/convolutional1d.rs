@@ -81,7 +81,7 @@ impl RawLayer for Convolutional1D {
                     let input_slice = input.slice(s![b, in_f, ..]);
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
 
-                    let conv = convolve1d(input_slice, kernel_slice, self.stride);
+                    let conv = convolve1d(input_slice, kernel_slice, output_width, self.stride);
 
                     output
                         .slice_mut(s![b, out_f, ..])
@@ -117,9 +117,9 @@ impl RawLayer for Convolutional1D {
                     // In these cases, we can swap the kernel and input to achieve the desired result
                     // without causing a shape error
                     let grad = if error_slice.dim() < input_slice.dim() {
-                        convolve1d(input_slice, error_slice, 1)
+                        convolve1d(input_slice, error_slice, kernel_width, 1)
                     } else {
-                        convolve1d(error_slice, input_slice, 1)
+                        convolve1d(error_slice, input_slice, kernel_width, 1)
                     };
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, ..])
@@ -148,7 +148,7 @@ impl RawLayer for Convolutional1D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
 
                     let padded = pad_1d(&delta_slice, kernel_slice.dim() - 1);
-                    let conv = convolve1d(padded.view(), kernel_slice, 1);
+                    let conv = convolve1d(padded.view(), kernel_slice, signal_width, 1);
                     error_signal
                         .slice_mut(s![b, in_f, ..])
                         .scaled_add(1., &conv);
@@ -185,8 +185,7 @@ fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     padded
 }
 
-fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
-    let output_size = ((input.dim() - kernel.dim()) / stride) + 1;
+fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output_size: usize, stride: usize) -> Array1<f32> {
     let mut output = Array1::zeros(output_size);
     let windows = input.windows_with_stride(kernel.dim(), stride);
     for (i, window) in windows.into_iter().enumerate() {
