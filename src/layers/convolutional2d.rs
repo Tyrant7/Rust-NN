@@ -114,7 +114,7 @@ impl RawLayer for Convolutional2D {
     }
 
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {        
-        let (batch_size, in_features, error_height, error_width) = forward_input.dim();
+        let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
 
         // Compute kernel gradients
@@ -125,8 +125,14 @@ impl RawLayer for Convolutional2D {
                     let input_slice = forward_input.slice(s![b, in_f, .., ..]);
                     let error_slice = delta.slice(s![b, out_f, .., ..]);
 
-                    // 1D convolution
-                    let grad = convolve2d(input_slice, error_slice, (kernel_height, kernel_width), (1, 1));
+                    // In some cases, the loss may actually be larger than the input due to padding
+                    // In these cases, we can swap the kernel and input to achieve the desired result
+                    // without causing a shape error
+                    let grad = if error_slice.dim() < input_slice.dim() {
+                        convolve2d(input_slice, error_slice, (kernel_height, kernel_width), (1, 1))
+                    } else {
+                        convolve2d(error_slice, input_slice, (kernel_height, kernel_width), (1, 1))
+                    };
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, .., ..])
                         .scaled_add(1., &grad);
@@ -142,7 +148,11 @@ impl RawLayer for Convolutional2D {
         }
 
         // Compute loss signal for backpropagation
-        let mut error_signal = Array4::zeros(forward_input.dim());
+        let output_width = ((input_width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
+        let output_height = ((input_height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
+        let signal_width = output_width + kernel_width - 1;
+        let signal_height = output_height + kernel_height - 1;
+        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
@@ -152,14 +162,25 @@ impl RawLayer for Convolutional2D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
 
                     let padded = pad_2d(&delta_slice, (kernel_height - 1, kernel_width - 1));
-                    let conv = convolve2d(padded.view(), kernel_slice, (error_height, error_width), (1, 1));
+                    let conv = convolve2d(padded.view(), kernel_slice, (signal_height, signal_width), (1, 1));
                     error_signal
                         .slice_mut(s![b, in_f, .., ..])
                         .scaled_add(1., &conv);
                 }
             }
         }
-        error_signal
+
+        // We need to crop the error signal to account for the padding added during the forward pass.
+        // In the case padding was added there will be extra error values mapping to those positions, 
+        // however they are not important for calculating the previous layer's error since they were
+        // added to the data by this layer during the forward pass
+        let crop_width = signal_width - input_width;
+        let crop_height = signal_height - input_height;
+        let left = crop_width / 2;
+        let right = crop_width - left;
+        let bottom = crop_height / 2;
+        let top = crop_height - bottom; 
+        error_signal.slice(s![.., .., bottom..signal_height - top, left..signal_width - right]).to_owned()
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
@@ -345,6 +366,45 @@ mod tests {
             1.,
         ]).unwrap();
         assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
+    }
+
+    #[test]
+    fn backward_padding() {
+        let kernels = Array4::from_shape_vec((1, 1, 2, 2), vec![
+            1., 1.,
+            1., 1.,
+        ]).unwrap();
+        let mut conv = Convolutional2D::new_from_kernels(kernels, None, (1, 1), (1, 1));
+
+        let input = Array4::<f32>::from_shape_vec((1, 1, 2, 2), vec![
+            0., 1., 
+            2., 3., 
+        ]).unwrap();
+        conv.forward(&input, false);
+
+        let error = Array4::<f32>::from_shape_vec((1, 1, 3, 3), vec![
+            1., 2., 1.,
+            2., 3., 2.,
+            1., 2., 1.,
+        ]).unwrap();
+        let error_signal = conv.backward(&error, &input);
+
+        let target_signal = Array4::<f32>::from_shape_vec((1, 1, 2, 2), vec![
+            8., 8.,
+            8., 8.,
+        ]).unwrap();
+        assert_eq!(error_signal, target_signal);
+
+        // let target_grads = Array4::<f32>::from_shape_vec((1, 2, 2, 2), vec![
+        //     // Kernel for in 1
+        //    -7., -6., 
+        //    -3., -2., 
+
+        //    // Kernel for in 2
+        //    -14.,-12., 
+        //    -6., -4.,
+        // ]).unwrap();
+        // assert_eq!(conv.kernels.gradients, target_grads);
     }
 
     #[test]
