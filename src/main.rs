@@ -67,7 +67,7 @@ async fn main() {
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
-        let mut max_cost: f32 = 0.;
+        let mut max_cost = 0.;
 
         /* thread::spawn(|| { */
         // Iterate over our entire dataset to collect gradients before applying them

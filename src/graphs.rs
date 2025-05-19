@@ -13,14 +13,14 @@ pub fn costs_candle(
     let y_min = *avg_costs
         .iter()
         .min_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap() as f32;
+        .unwrap();
     let y_max = *avg_costs
         .iter()
         .max_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap() as f32;
+        .unwrap();
 
     let mut chart = plotters::chart::ChartBuilder::on(&root)
-        .caption("Chart", ("sans-serif", 20))
+        .caption("Loss per epoch", ("sans-serif", 20))
         .margin(5)
         .x_label_area_size(30)
         .y_label_area_size(30)
@@ -43,7 +43,7 @@ pub fn costs_candle(
 
     chart
         .draw_series(avg_costs.iter().enumerate().map(|(index, x)| {
-            CandleStick::new(index as u32, 0., 0., 0., *x as f32, GREEN.filled(), RED, 15)
+            CandleStick::new(index as u32, 0., 0., 0., *x, GREEN.filled(), RED, 15)
         }))?
         .label("Average Cost")
         .legend(|(x, y)| {
@@ -54,7 +54,7 @@ pub fn costs_candle(
 
     chart
         .draw_series(max_costs.iter().enumerate().map(|(index, x)| {
-            CandleStick::new(index as u32, 0., 0., 0., *x as f32, BLUE.filled(), RED, 15)
+            CandleStick::new(index as u32, 0., 0., 0., *x, BLUE.filled(), RED, 15)
         }))?
         .label("Max Cost")
         .legend(|(x, y)| {
