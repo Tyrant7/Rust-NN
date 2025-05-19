@@ -43,6 +43,9 @@ impl RawLayer for MaxPool1D {
         let output_width = ((width - self.kernel_width + (2 * self.padding)) / self.stride) + 1;
         let mut output = Array3::zeros((batch_size, in_features, output_width));
 
+        // (batch_size, in_features, width)
+        let input = pad_3d(&input.view(), (0, 0, self.padding));
+
         // We'll track which indices we selected for pooling to propagate error only through those
         // indices during the backward pass
         let mut max_indices = Array3::<usize>::zeros((batch_size, in_features, output_width));
@@ -67,21 +70,28 @@ impl RawLayer for MaxPool1D {
     }
 
     fn backward(&mut self, error: &Array3<f32>, forward_input: &Array3<f32>) -> Array3<f32> {
-        let (batch_size, in_features, _) = forward_input.dim();
+        let (batch_size, in_features, input_width) = forward_input.dim();
         let (_, _, error_width) = error.dim();
-        let mut signal = Array3::zeros(forward_input.dim());
+
+        let signal_width = (error_width - 1) * self.stride + self.kernel_width;
+        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
         let max_indices = self.max_indices
             .as_ref()
             .expect("No indices stored during forward pass or forward pass never called!");
         for b in 0..batch_size {
             for in_f in 0..in_features {
                 for i in 0..error_width {
+                    // Indices were saved with padding, so may be incorrect
                     let idx = max_indices[[b, in_f, i]];
-                    signal[[b, in_f, idx]] = error[[b, in_f, i]];
+                    error_signal[[b, in_f, idx]] += error[[b, in_f, i]];
                 }
             }
         }
-        signal
+
+        let crop = signal_width - input_width;
+        let left = crop / 2;
+        let right = crop - left;
+        error_signal.slice(s![.., .., left..signal_width - right]).to_owned()
     }
 }
 
@@ -114,6 +124,28 @@ mod tests {
     }
 
     #[test]
+    fn forward_stride_and_padding() {
+        let mut maxpool = MaxPool1D::new_full(2, 1, 1);
+        
+        let input = Array3::<f32>::from_shape_vec((1, 2, 2), vec![
+            // Feature 1
+            1., 2.,
+            // Feature 2
+            4., 3.,
+        ]).unwrap();
+        let output = maxpool.forward(&input, false);
+
+        let target = Array3::<f32>::from_shape_vec((1, 2, 3), vec![
+            // Feature 1
+            1., 2., 2.,
+            // Feature 2
+            4., 4., 3.,
+        ]).unwrap();
+
+        assert_eq!(output, target);
+    }
+
+    #[test]
     fn backward() {
         let mut maxpool = MaxPool1D::new(2);
         
@@ -134,6 +166,28 @@ mod tests {
         let target_signal = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
              0.,-1., 0., 1.,
             -1., 0., 2., 0.,
+        ]).unwrap();
+
+        assert_eq!(error_signal, target_signal);
+    }
+
+    #[test]
+    fn backward_stride_and_padding() {
+        let mut maxpool = MaxPool1D::new_full(2, 2, 1);
+        
+        let input = Array3::<f32>::from_shape_vec((1, 1, 4), vec![
+            // Feature 1
+            1., 2., 3., 4.,
+        ]).unwrap();
+        maxpool.forward(&input, false);
+
+        let error = Array3::<f32>::from_shape_vec((1, 1, 3), vec![
+            -1., 2., 1.,
+        ]).unwrap();
+        let error_signal = maxpool.backward(&error, &input);
+
+        let target_signal = Array3::<f32>::from_shape_vec((1, 1, 4), vec![
+            -1., 0., 2., 1.
         ]).unwrap();
 
         assert_eq!(error_signal, target_signal);
