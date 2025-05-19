@@ -34,5 +34,4 @@
 
 ## Fixes
 
--   Make sure convolutional layers work with smaller sizes (may need to crop output dimensions on backward pass if full convolution
-    on output shape does not line up with input)
+-   None at the moment
