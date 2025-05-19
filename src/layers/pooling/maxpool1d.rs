@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayD, ArrayView2, Axis, Ix2, Ix3, IxDyn};
 
-use crate::{conv_helpers::{pad_1d, pad_3d}, layers::{ParameterGroup, RawLayer}};
+use crate::{conv_helpers::{crop_3d, pad_1d, pad_3d}, layers::{ParameterGroup, RawLayer}};
 
 #[derive(Debug)]
 pub struct MaxPool1D {
@@ -87,11 +87,7 @@ impl RawLayer for MaxPool1D {
                 }
             }
         }
-
-        let crop = signal_width - input_width;
-        let left = crop / 2;
-        let right = crop - left;
-        error_signal.slice(s![.., .., left..signal_width - right]).to_owned()
+        crop_3d(&error_signal.view(), (0, 0, signal_width - input_width))
     }
 }
 

@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 
-use crate::conv_helpers::{convolve1d, pad_1d, pad_3d};
+use crate::conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -154,10 +154,7 @@ impl RawLayer for Convolutional1D {
         // In the case padding was added there will be extra error values mapping to those positions, 
         // however they are not important for calculating the previous layer's error since they were
         // added to the data by this layer during the forward pass
-        let crop = signal_width - input_width;
-        let left = crop / 2;
-        let right = crop - left;
-        error_signal.slice(s![.., .., left..signal_width - right]).to_owned()
+        crop_3d(&error_signal.view(), (0, 0, signal_width - input_width))
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
