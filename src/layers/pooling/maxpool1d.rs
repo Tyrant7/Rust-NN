@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayD, ArrayView2, Axis, Ix2, Ix3, IxDyn};
 
-use crate::layers::{ParameterGroup, RawLayer};
+use crate::{conv_helpers::{pad_1d, pad_3d}, layers::{ParameterGroup, RawLayer}};
 
 #[derive(Debug)]
 pub struct MaxPool1D {

@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 
-use crate::conv_helpers::{convolve1d, pad_1d};
+use crate::conv_helpers::{convolve1d, pad_1d, pad_3d};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -61,17 +61,9 @@ impl RawLayer for Convolutional1D {
     fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
 
-        // Pad the input
         // (batch_size, in_features, width)
-        let input = {
-            if self.padding > 0 {
-                let mut padded = Array3::zeros((batch_size, in_features, width + self.padding * 2));
-                padded.slice_mut(s![0..batch_size, 0..in_features, self.padding..width + self.padding]).assign(input);
-                padded
-            } else {
-                input.to_owned()
-            }
-        };
+        // We only care about padding the width dimension
+        let input = pad_3d(&input.view(), (0, 0, self.padding));
 
         // 1D convolution
         let (out_features, _, kernel_width) = self.kernels.values.dim();

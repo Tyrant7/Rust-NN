@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 
-use crate::conv_helpers::{convolve2d, pad_2d};
+use crate::conv_helpers::{convolve2d, pad_2d, pad_4d};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -63,21 +63,9 @@ impl RawLayer for Convolutional2D {
     fn forward(&mut self, input: &Array4<f32>, _train: bool) -> Array4<f32> {
         let (batch_size, in_features, height, width) = input.dim();
 
-        // Pad the input
         // (batch_size, in_features, height, width)
-        let input = {
-            if self.padding.0 > 0 || self.padding.1 > 0 {
-                let mut padded = Array4::zeros(
-                    (batch_size, in_features, height + self.padding.0 * 2, width + self.padding.1 * 2)
-                );
-                padded.slice_mut(
-                    s![0..batch_size, 0..in_features, (self.padding.0)..height + self.padding.0, (self.padding.1)..width + self.padding.1]
-                ).assign(input);
-                padded
-            } else {
-                input.to_owned()
-            }
-        };
+        // We only care about padding the height and width dimensions
+        let input = pad_4d(&input.view(), (0, 0, self.padding.0, self.padding.1));
 
         // 2D convolution
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
