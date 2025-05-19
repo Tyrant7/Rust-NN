@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 
-use crate::conv_helpers::{convolve2d, pad_2d, pad_4d};
+use crate::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -164,13 +164,7 @@ impl RawLayer for Convolutional2D {
         // In the case padding was added there will be extra error values mapping to those positions, 
         // however they are not important for calculating the previous layer's error since they were
         // added to the data by this layer during the forward pass
-        let crop_width = signal_width - input_width;
-        let crop_height = signal_height - input_height;
-        let left = crop_width / 2;
-        let right = crop_width - left;
-        let bottom = crop_height / 2;
-        let top = crop_height - bottom; 
-        error_signal.slice(s![.., .., bottom..signal_height - top, left..signal_width - right]).to_owned()
+        crop_4d(&error_signal.view(), (0, 0, signal_height - input_height, signal_width - input_width))
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {

@@ -90,3 +90,16 @@ pub fn pad_4d(input: &ArrayView4<f32>, padding: (usize, usize, usize, usize)) ->
     ).assign(input);
     padded
 }
+
+pub fn crop_4d(input: &ArrayView4<f32>, crop: (usize, usize, usize, usize)) -> Array4<f32> {
+    let dim = input.dim();
+    let bottom = crop.0 / 2;
+    let top = crop.0 - bottom;
+    let left = crop.1 / 2;
+    let right = crop.1 - left;
+    let front = crop.2 / 2;
+    let back = crop.2 - front;
+    let ana = crop.3 / 2;
+    let kata = crop.3 - ana;
+    input.slice(s![bottom..dim.0 - top, left..dim.1 - right, front..dim.2 - back, ana..dim.3 - kata]).to_owned()
+}
