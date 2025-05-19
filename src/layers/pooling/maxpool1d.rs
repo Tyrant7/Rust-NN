@@ -1,7 +1,6 @@
-use rand::Rng;
-use ndarray::{s, Array1, Array2, Array3, ArrayD, ArrayView2, Axis, Ix2, Ix3, IxDyn};
+use ndarray::{s, Array3, Axis, Ix3};
 
-use crate::{conv_helpers::{crop_3d, pad_1d, pad_3d}, layers::{ParameterGroup, RawLayer}};
+use crate::{conv_helpers::{crop_3d, pad_3d}, layers::{ParameterGroup, RawLayer}};
 
 #[derive(Debug)]
 pub struct MaxPool1D {
@@ -93,8 +92,6 @@ impl RawLayer for MaxPool1D {
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array1;
-
     use super::*;
 
     #[test]
