@@ -2,16 +2,14 @@
 
 ## Currently working on:
 
--   Max pooling 2d
--   Avg pooling for 1d and 2d
--   Global pooling for max and avg for 1d and 2d
+-   Data loading from file
+-   Solve MNIST as a sample problem to show off some cool capability
 
 ## Next up:
 
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   More safety assertions throughout codebase, especially within layers
--   Solve MNIST as a sample problem to show off some cool capability
 -   CPU multithreading
 
 ## Layer types:
@@ -20,6 +18,10 @@
 -   Batch norm
 -   RNN support
     -   LSTM support
+-   More pooling layers
+    -   First, create default "pooling layer" type
+    -   Then, can add different layers by defining their "choose" method
+    -   Avg pooling
 
 ## Other features:
 
