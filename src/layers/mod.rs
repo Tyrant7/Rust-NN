@@ -91,6 +91,7 @@ pub use convolutional2d::Convolutional2D;
 
 pub mod pooling;
 pub use pooling::maxpool1d::MaxPool1D;
+pub use pooling::maxpool2d::MaxPool2D;
 
 pub mod flatten;
 pub use flatten::Flatten;
