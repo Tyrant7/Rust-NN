@@ -47,7 +47,7 @@ impl RawLayer for MaxPool1D {
 
         // We'll track which indices we selected for pooling to propagate error only through those
         // indices during the backward pass
-        let mut max_indices = Array3::<usize>::zeros((batch_size, in_features, output_width));
+        let mut max_indices = Array3::<usize>::zeros(output.dim());
 
         for b in 0..batch_size {
             for in_f in 0..in_features {
