@@ -73,25 +73,28 @@ impl RawLayer for MaxPool2D {
     }
 
     fn backward(&mut self, error: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
-        error.clone()
-        // let (batch_size, in_features, input_width) = forward_input.dim();
-        // let (_, _, error_width) = error.dim();
+        let (batch_size, in_features, input_height, input_width) = forward_input.dim();
+        let (_, _, error_height, error_width) = error.dim();
 
-        // let signal_width = (error_width - 1) * self.stride + self.kernel_width;
-        // let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
-        // let max_indices = self.max_indices
-        //     .as_ref()
-        //     .expect("No indices stored during forward pass or forward pass never called!");
-        // for b in 0..batch_size {
-        //     for in_f in 0..in_features {
-        //         for i in 0..error_width {
-        //             // Indices were saved with padding, so may be incorrect
-        //             let idx = max_indices[[b, in_f, i]];
-        //             error_signal[[b, in_f, idx]] += error[[b, in_f, i]];
-        //         }
-        //     }
-        // }
-        // crop_3d(&error_signal.view(), (0, 0, signal_width - input_width))
+        let signal_width = (error_width - 1) * self.stride.1 + self.kernel_size.1;
+        let signal_height = (error_height - 1) * self.stride.0 + self.kernel_size.0;
+        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
+        let max_indices = self.max_indices
+            .as_ref()
+            .expect("No indices stored during forward pass or forward pass never called!");
+        let (_, _, indices_height, indices_width) = max_indices.dim();
+        for b in 0..batch_size {
+            for in_f in 0..in_features {
+                for y in 0..indices_height {
+                    for x in 0..indices_width {
+                        // Indices were saved with padding, so may be incorrect
+                        let (idx_y, idx_x) = max_indices[[b, in_f, y, x]];
+                        error_signal[[b, in_f, idx_y, idx_x]] += error[[b, in_f, y, x]];
+                    }
+                }
+            }
+        }
+        crop_4d(&error_signal.view(), (0, 0, signal_height - input_height, signal_width - input_width))
     }
 }
 
@@ -125,7 +128,7 @@ mod tests {
 
     #[test]
     fn forward_stride_and_padding() {
-        let mut maxpool = MaxPool2D::new_full((2, 2), (1, 1), (1, 1));
+        let mut maxpool = MaxPool2D::new_full((2, 2), (2, 1), (1, 1));
         
         let input = Array4::<f32>::from_shape_vec((1, 1, 2, 3), vec![
             1., 2., -1.,
@@ -133,61 +136,69 @@ mod tests {
         ]).unwrap();
         let output = maxpool.forward(&input, false);
 
-        let target = Array4::<f32>::from_shape_vec((1, 1, 3, 4), vec![
+        let target = Array4::<f32>::from_shape_vec((1, 1, 2, 4), vec![
             // Feature 1
             1., 2., 2., 0., 
-            4., 4., 5., 5.,
             4., 4., 5., 5.,
         ]).unwrap();
 
         assert_eq!(output, target);
     }
 
-    // #[test]
-    // fn backward() {
-    //     let mut maxpool = MaxPool1D::new(2);
+    #[test]
+    fn backward() {
+        let mut maxpool = MaxPool2D::new((2, 2));
         
-    //     let input = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
-    //         // Feature 1
-    //         1., 2., 3., 4.,
-    //         // Feature 2
-    //         5., 4., 3., 2.,
-    //     ]).unwrap();
-    //     maxpool.forward(&input, false);
+        let input = Array4::<f32>::from_shape_vec((1, 2, 2, 4), vec![
+            // Feature 1
+            1., 2., 4.,-1.,
+            5., 4., 3., 0.,
+            // Feature 2
+            1., 2., 4., 0.,
+            1., 3., 4., 5.,
+        ]).unwrap();
+        maxpool.forward(&input, false);
 
-    //     let error = Array3::<f32>::from_shape_vec((1, 2, 2), vec![
-    //         -1., 1.,
-    //         -1., 2.,
-    //     ]).unwrap();
-    //     let error_signal = maxpool.backward(&error, &input);
+        let error = Array4::<f32>::from_shape_vec((1, 2, 1, 2), vec![
+            // Feature 1
+            -1., 1.,
+            // Feature 2
+            -1., 2.,
+        ]).unwrap();
+        let error_signal = maxpool.backward(&error, &input);
 
-    //     let target_signal = Array3::<f32>::from_shape_vec((1, 2, 4), vec![
-    //          0.,-1., 0., 1.,
-    //         -1., 0., 2., 0.,
-    //     ]).unwrap();
+        let target_signal = Array4::<f32>::from_shape_vec((1, 2, 2, 4), vec![
+            // Feature 1
+             0., 0., 1., 0.,
+            -1., 0., 0., 0.,
+            // Feature 2
+             0., 0., 0., 0.,
+             0.,-1., 0., 2.,
+        ]).unwrap();
 
-    //     assert_eq!(error_signal, target_signal);
-    // }
+        assert_eq!(error_signal, target_signal);
+    }
 
-    // #[test]
-    // fn backward_stride_and_padding() {
-    //     let mut maxpool = MaxPool1D::new_full(2, 2, 1);
+    #[test]
+    fn backward_stride_and_padding() {
+        let mut maxpool = MaxPool2D::new_full((2, 2), (1, 2), (0, 1));
         
-    //     let input = Array3::<f32>::from_shape_vec((1, 1, 4), vec![
-    //         // Feature 1
-    //         1., 2., 3., 4.,
-    //     ]).unwrap();
-    //     maxpool.forward(&input, false);
+        let input = Array4::<f32>::from_shape_vec((1, 1, 2, 4), vec![
+            1., 2., 3.,-8.,
+            0., 3., 6.,-9.,
+        ]).unwrap();
+        maxpool.forward(&input, false);
 
-    //     let error = Array3::<f32>::from_shape_vec((1, 1, 3), vec![
-    //         -1., 2., 1.,
-    //     ]).unwrap();
-    //     let error_signal = maxpool.backward(&error, &input);
+        let error = Array4::<f32>::from_shape_vec((1, 1, 1, 3), vec![
+            -1., 2., 1.,
+        ]).unwrap();
+        let error_signal = maxpool.backward(&error, &input);
 
-    //     let target_signal = Array3::<f32>::from_shape_vec((1, 1, 4), vec![
-    //         -1., 0., 2., 1.
-    //     ]).unwrap();
+        let target_signal = Array4::<f32>::from_shape_vec((1, 1, 2, 4), vec![
+            -1., 0., 0., 0.,
+             0., 0., 2., 0.,
+        ]).unwrap();
 
-    //     assert_eq!(error_signal, target_signal);
-    // }
+        assert_eq!(error_signal, target_signal);
+    }
 }

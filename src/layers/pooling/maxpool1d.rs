@@ -77,9 +77,10 @@ impl RawLayer for MaxPool1D {
         let max_indices = self.max_indices
             .as_ref()
             .expect("No indices stored during forward pass or forward pass never called!");
+        let (_, _, indices_width) = max_indices.dim();
         for b in 0..batch_size {
             for in_f in 0..in_features {
-                for i in 0..error_width {
+                for i in 0..indices_width {
                     // Indices were saved with padding, so may be incorrect
                     let idx = max_indices[[b, in_f, i]];
                     error_signal[[b, in_f, idx]] += error[[b, in_f, i]];
