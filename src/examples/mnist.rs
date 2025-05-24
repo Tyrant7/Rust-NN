@@ -1,11 +1,13 @@
 use std::env;
 use std::fs;
 
+use colored::Colorize;
 use ndarray::Array4;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
 
 use crate::chain;
+use crate::graphs;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
@@ -14,6 +16,11 @@ use crate::layers::Linear;
 use crate::layers::MaxPool2D;
 use crate::layers::ReLU;
 
+use crate::layers::Sigmoid;
+use crate::loss_functions::LossFunction;
+use crate::loss_functions::MSELoss;
+use crate::optimizers::Optimizer;
+use crate::optimizers::SGD;
 use crate::Chain;
 use crate::Tracked;
 
@@ -52,62 +59,75 @@ pub fn run() {
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
+        Sigmoid
     );
 
-    // shape: (28, 28)
-    let sample = train_data.slice(s![0, .., ..]).to_owned();
-    // shape: (batch, 1, 28, 28)
-    let expanded = sample.insert_axis(Axis(0)).insert_axis(Axis(0));
-    let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
-    let output = network.forward(&expanded_f32, false);
+    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
+    let epochs = 100;
 
-    println!("output: {output}");
+    let mut avg_costs = Vec::new();
+    let mut max_costs = Vec::new();
 
-    // let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
-    // let epochs = 10000;
+    let batch_size = 10;
+    let samples = train_data.shape()[0];
 
-    // let mut avg_costs = Vec::new();
-    // let mut max_costs = Vec::new();
+    let num_batches = samples / batch_size;
 
-    // let time = std::time::Instant::now();
+    let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
+    let reshaped_train = train_data.to_shape(new_shape).unwrap();
 
-    // for epc in 0..epochs {
-    //     let mut avg_cost = 0.;
-    //     let mut max_cost = 0.;
+    let time = std::time::Instant::now();
 
-    //     /* thread::spawn(|| { */
-    //     // Iterate over our entire dataset to collect gradients before applying them
-    //     for (x, label) in data.iter() {
-    //         let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
-    //         let label = Array2::from_shape_fn((1, 1), |_| *label).into_dyn();
+    for epc in 0..epochs {
+        let mut avg_cost = 0.;
+        let mut max_cost = 0.;
 
-    //         let pred = network.forward(&x, true);
+        /* thread::spawn(|| { */
+        for (i, (x, label)) in reshaped_train.axis_iter(Axis(0)).zip(train_labels.iter()).enumerate() {
+            println!("batch {i}");
 
-    //         let cost = MSELoss::original(&pred, &label);
-    //         avg_cost += cost;
-    //         max_cost = cost.max(max_cost);
+            let mut label_encoded = Array1::from_elem(10, 0.);
+            label_encoded[*label as usize] = 1.;
 
-    //         // Back propagation
-    //         network.backward(&MSELoss::derivative(&pred, &label));
-    //     }
-    //     /* }); */
+            // go from shape (28, 28) to (batch, 1, 28, 28)
+            let expanded = x.insert_axis(Axis(1));
+            let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
 
-    //     avg_costs.push(avg_cost);
-    //     max_costs.push(max_cost);
+            let before = time.elapsed().as_millis();
 
-    //     // Gradient application
-    //     optimizer.step(&mut network.get_learnable_parameters(), data.len());
+            let pred = network.forward(&expanded_f32, true);
 
-    //     // Zero gradients before next epoch
-    //     optimizer.zero_gradients(&mut network.get_learnable_parameters());
+            println!("forw: {}ms", time.elapsed().as_millis() - before);
 
-    //     println!("Epoch {} avg cost: {}", epc + 1, avg_cost / data.len() as f32);
-    // }
+            let cost = MSELoss::original(&pred.clone().into_dyn(), &label_encoded.clone().into_dyn());
+            avg_cost += cost;
+            max_cost = cost.max(max_cost);
 
-    // println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
+            let before = time.elapsed().as_millis();
+            
+            // Back propagation
+            network.backward(&MSELoss::derivative(&pred.into_dyn(), &label_encoded.into_dyn()));
 
-    // println!("Generating costs chart");
-    // let _ = graphs::costs_candle(&avg_costs, &max_costs);
+            println!("back: {}ms", time.elapsed().as_millis() - before);
+        }
+        /* }); */
+
+        avg_costs.push(avg_cost);
+        max_costs.push(max_cost);
+
+        // Gradient application
+        optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
+
+        // Zero gradients before next epoch
+        optimizer.zero_gradients(&mut network.get_learnable_parameters());
+
+        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / train_data.len() as f32);
+    }
+
+    println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
+
+    println!("Generating costs chart");
+    let _ = graphs::costs_candle(&avg_costs, &max_costs);
 }
 
 fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
