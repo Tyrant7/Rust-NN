@@ -71,6 +71,7 @@ pub fn run() {
     let batch_size = 10;
     let samples = train_data.shape()[0];
 
+    assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
     let num_batches = samples / batch_size;
 
     let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
@@ -109,17 +110,21 @@ pub fn run() {
             network.backward(&MSELoss::derivative(&pred.into_dyn(), &label_encoded.into_dyn()));
 
             println!("back: {}ms", time.elapsed().as_millis() - before);
+
+            let before = time.elapsed().as_millis();
+
+            // Gradient application
+            optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
+
+            // Zero gradients before next epoch
+            optimizer.zero_gradients(&mut network.get_learnable_parameters());
+
+            println!("optm: {}ms", time.elapsed().as_millis() - before);
         }
         /* }); */
 
         avg_costs.push(avg_cost);
         max_costs.push(max_cost);
-
-        // Gradient application
-        optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
-
-        // Zero gradients before next epoch
-        optimizer.zero_gradients(&mut network.get_learnable_parameters());
 
         println!("Epoch {} avg cost: {}", epc + 1, avg_cost / train_data.len() as f32);
     }
