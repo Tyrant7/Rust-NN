@@ -1,15 +1,26 @@
 use std::env;
 use std::fs;
 
+use ndarray::Array1;
 use ndarray::Array3;
 
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
 pub fn run() {
-    let file_path = "data/t10k-images.idx3-ubyte";
-    println!("reading {file_path}");
+    let data_path = "data/t10k-images.idx3-ubyte";
+    let labels_path = "data/t10k-labels.idx1-ubyte";
+    let (data, labels) = read_data(data_path, labels_path);
 
-    let contents = fs::read(file_path)
+    // Random sampling:
+    println!("Image samples: \n{:#?}", data.slice(ndarray::s![102, .., ..]));
+    println!("label: \n{:#?}", labels.slice(ndarray::s![102]));
+
+    println!("Image samples: \n{:#?}", data.slice(ndarray::s![107, .., ..]));
+    println!("label: \n{:#?}", labels.slice(ndarray::s![107]));
+}
+
+fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
+    let contents = fs::read(data_path)
         .expect("Should have been able to read the file");
     let mut contents = contents.into_iter();
 
@@ -46,15 +57,6 @@ pub fn run() {
 
     let datatype = contents.next().expect("File missing datatype");
     assert!(datatype == 0x08, "datatype should be u8 for MNIST");
-    // match datatype {
-    //     0x08 => u8,
-    //     0x09 => i8,
-    //     0x0B => i16,
-    //     0x0C => i32,
-    //     0x0D => f32,
-    //     0x0E => f64,
-    //     _ => panic!("Unknown datatype"),
-    // };
 
     let ndims = contents.next().expect("File missing dimensions");
     assert!(ndims == 3, "ndims should be 3 for MNIST");
@@ -69,15 +71,35 @@ pub fn run() {
         dims.push(dim as usize);
     }
 
-    println!("datatype: {datatype}");
-    println!("ndims: {ndims}");
-    println!("dims: {:?}", dims);
-
     let images = Array3::from_shape_vec((dims[0], dims[1], dims[2]), contents.collect())
         .expect("Shape mismatch");
+    
+    
+    // Read back labels too
+    
+    let contents = fs::read(labels_path)
+        .expect("Should have been able to read the file");
+    let mut contents = contents.into_iter();
 
-    println!("Images: \n{:?}", images);
+    let zero_bytes = (
+        contents.next().expect("Missing file metadata"), 
+        contents.next().expect("Missing file metadata")
+    );
+    assert!(zero_bytes.0 == 0 && zero_bytes.1 == 0, "First 2 bytes in file should be zero");
 
-    // Random sampling:
-    println!("Image samples: \n{:#?}", images.slice(ndarray::s![100, .., ..]));
+    let datatype = contents.next().expect("File missing datatype");
+    assert!(datatype == 0x08, "datatype should be u8 for MNIST labels");
+
+    let ndims = contents.next().expect("File missing dimensions");
+    assert!(ndims == 1, "ndims should be 1 for MNIST labels");
+
+    let dim_bytes = (0..4)
+        .map(|_| contents.next().expect("Missing dim byte"))
+        .collect::<Vec<u8>>();
+    let dim = i32::from_be_bytes(dim_bytes[0..4].try_into().unwrap()) as usize;
+
+    let labels = Array1::from_shape_vec(dim, contents.collect())
+        .expect("Shape mismatch");
+    
+    (images, labels)
 }
