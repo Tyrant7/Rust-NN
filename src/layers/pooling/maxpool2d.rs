@@ -13,7 +13,7 @@ pub struct MaxPool2D {
 
 impl MaxPool2D {
     /// Pairs follow shape: (height, width)
-    fn new_full(
+    pub fn new_full(
         kernel_size: (usize, usize),
         stride: (usize, usize),
         padding: (usize, usize),
@@ -28,7 +28,7 @@ impl MaxPool2D {
         }
     }
 
-    fn new(kernel_size: (usize, usize)) -> Self {
+    pub fn new(kernel_size: (usize, usize)) -> Self {
         Self::new_full(kernel_size, kernel_size, (0, 0))
     }
 }
