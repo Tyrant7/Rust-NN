@@ -111,15 +111,11 @@ pub fn run() {
 
             println!("back: {}ms", time.elapsed().as_millis() - before);
 
-            let before = time.elapsed().as_millis();
-
             // Gradient application
             optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
 
             // Zero gradients before next epoch
             optimizer.zero_gradients(&mut network.get_learnable_parameters());
-
-            println!("optm: {}ms", time.elapsed().as_millis() - before);
         }
         /* }); */
 

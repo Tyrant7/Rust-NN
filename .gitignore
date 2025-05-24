@@ -4,3 +4,7 @@
 
 charts/*
 data/*
+
+# Profiling stuff
+
+profile.json.gz
