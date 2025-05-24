@@ -17,6 +17,8 @@ use crate::layers::ReLU;
 use crate::Chain;
 use crate::Tracked;
 
+#[allow(unused)]
+
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
 pub fn run() {

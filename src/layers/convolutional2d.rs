@@ -97,6 +97,7 @@ impl RawLayer for Convolutional2D {
             output += &b.values.view()
                 .insert_axis(Axis(0))
                 .insert_axis(Axis(2))
+                .insert_axis(Axis(2))
                 .broadcast(output.dim())
                 .unwrap();
         }
