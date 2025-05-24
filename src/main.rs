@@ -40,8 +40,8 @@ mod graphs;
 mod examples;
 use examples::mnist;
 
-#[tokio::main]
-async fn main() {
+// #[tokio::main]
+fn main() {
     mnist::run();
 
     // // Example usage of the library solving the XOR problem
