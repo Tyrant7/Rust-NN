@@ -7,16 +7,15 @@ use ndarray::Array3;
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
 pub fn run() {
-    let data_path = "data/t10k-images.idx3-ubyte";
-    let labels_path = "data/t10k-labels.idx1-ubyte";
-    let (data, labels) = read_data(data_path, labels_path);
+    let train_data_path = "data/t10k-images.idx3-ubyte";
+    let train_labels_path = "data/t10k-labels.idx1-ubyte";
+    let (train_data, train_labels) = read_data(train_data_path, train_labels_path);
 
-    // Random sampling:
-    println!("Image samples: \n{:#?}", data.slice(ndarray::s![102, .., ..]));
-    println!("label: \n{:#?}", labels.slice(ndarray::s![102]));
+    let test_data_path = "data/train-images.idx3-ubyte";
+    let test_labels_path = "data/train-labels.idx1-ubyte";
+    let (test_data, test_labels) = read_data(test_data_path, test_labels_path);
 
-    println!("Image samples: \n{:#?}", data.slice(ndarray::s![107, .., ..]));
-    println!("label: \n{:#?}", labels.slice(ndarray::s![107]));
+
 }
 
 fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
