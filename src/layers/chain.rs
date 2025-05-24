@@ -61,6 +61,9 @@ where
 
 #[macro_export]
 macro_rules! chain {
+    ($a:expr) => {
+        Tracked::new($a)
+    };
     ($a:expr, $b:expr) => {
         Chain::new(Tracked::new($a), Tracked::new($b))
     };
