@@ -38,13 +38,28 @@ pub fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
 }
 
 /// output_size and stride: (height, width)
-pub fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, output_size: (usize, usize), stride: (usize, usize)) -> Array2<f32> {
-    let mut output = Array2::zeros(output_size);
-    let windows = input.windows_with_stride(kernel.dim(), stride);
-    for (i, window) in windows.into_iter().enumerate() {
-        let (x, y) = (i % output_size.1, i / output_size.1); 
-        output[[y, x]] += (&window * &kernel).sum();
+pub fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, stride: (usize, usize)) -> Array2<f32> {
+    let (i_h, i_w) = input.dim();
+    let (k_h, k_w) = kernel.dim();
+    let (s_y, s_x) = stride;
+    
+    let output_h = (i_h - k_h) / s_y + 1;
+    let output_w = (i_w - k_w) / s_x + 1;
+    let mut output = Array2::zeros((output_h, output_w));
+    for out_y in 0..output_h {
+        for out_x in 0..output_w {
+            let mut acc = 0.0;
+            for ky in 0..k_h {
+                for kx in 0..k_w {
+                    let in_y = out_y * s_y + ky;
+                    let in_x = out_x * s_x + kx;
+                    acc += input[(in_y, in_x)] * kernel[(ky, kx)];
+                }
+            }
+            output[(out_y, out_x)] = acc;
+        }
     }
+
     output
 }
 
