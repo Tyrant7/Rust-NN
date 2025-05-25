@@ -24,10 +24,10 @@ use crate::optimizers::SGD;
 use crate::Chain;
 use crate::Tracked;
 
-#[allow(unused)]
 
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
+#[allow(unused)]
 pub fn run() {
     let train_data_path = "data/t10k-images.idx3-ubyte";
     let train_labels_path = "data/t10k-labels.idx1-ubyte";
@@ -65,6 +65,7 @@ pub fn run() {
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
     let epochs = 3;
 
+    // TODO: Let's track accuracy (by %) each epoch too
     let mut avg_costs = Vec::new();
     let mut max_costs = Vec::new();
 
