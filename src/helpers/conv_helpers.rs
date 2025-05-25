@@ -47,7 +47,7 @@ pub fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
 }
 
 /// output_size and stride: (height, width)
-pub fn convolve2d(input: ArrayView2<f32>, kernel: ArrayView2<f32>, stride: (usize, usize)) -> Array2<f32> {
+pub fn convolve2d(input: &ArrayView2<f32>, kernel: &ArrayView2<f32>, stride: (usize, usize)) -> Array2<f32> {
     let (i_h, i_w) = input.dim();
     let (k_h, k_w) = kernel.dim();
     let (s_y, s_x) = stride;

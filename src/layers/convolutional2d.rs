@@ -79,8 +79,8 @@ impl RawLayer for Convolutional2D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, .., ..]);
 
                     let conv = convolve2d(
-                        input_slice, 
-                        kernel_slice, 
+                        &input_slice, 
+                        &kernel_slice, 
                         self.stride
                     );
 
@@ -119,9 +119,9 @@ impl RawLayer for Convolutional2D {
                     // In these cases, we can swap the kernel and input to achieve the desired result
                     // without causing a shape error
                     let grad = if error_slice.dim() < input_slice.dim() {
-                        convolve2d(input_slice, error_slice, (1, 1))
+                        convolve2d(&input_slice, &error_slice, (1, 1))
                     } else {
-                        convolve2d(error_slice, input_slice, (1, 1))
+                        convolve2d(&error_slice, &input_slice, (1, 1))
                     };
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, .., ..])
@@ -152,7 +152,7 @@ impl RawLayer for Convolutional2D {
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
 
                     let padded = pad_2d(&delta_slice, (kernel_height - 1, kernel_width - 1));
-                    let conv = convolve2d(padded.view(), kernel_slice, (1, 1));
+                    let conv = convolve2d(&padded.view(), &kernel_slice, (1, 1));
                     error_signal
                         .slice_mut(s![b, in_f, .., ..])
                         .scaled_add(1., &conv);
