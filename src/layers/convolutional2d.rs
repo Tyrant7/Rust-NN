@@ -1,5 +1,8 @@
+use std::sync::Mutex;
+
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
+use rayon::prelude::*;
 
 use crate::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d};
 
@@ -71,8 +74,11 @@ impl RawLayer for Convolutional2D {
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let mut output = Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
-        for b in 0..batch_size {
+        let batch_outputs = (0..batch_size)
+            .map(|_| Mutex::new(Array3::<f32>::zeros((out_features, output_height, output_width))))
+            .collect::<Vec<_>>();
+        (0..batch_size).into_par_iter().for_each(|b| {
+            let mut batch_output = batch_outputs[b].lock().unwrap();
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, .., ..]);
@@ -84,11 +90,18 @@ impl RawLayer for Convolutional2D {
                         self.stride
                     );
 
-                    output
-                        .slice_mut(s![b, out_f, .., ..])
+                    batch_output
+                        .slice_mut(s![out_f, .., ..])
                         .scaled_add(1., &conv);
                 }
             }
+        });
+
+        let mut output = Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
+        for (b, batch) in batch_outputs.into_iter().enumerate() {
+            output
+                .slice_mut(s![b, .., .., ..])
+                .assign(&batch.into_inner().unwrap());
         }
 
         // Apply bias to the second dimension (features)
@@ -114,7 +127,19 @@ impl RawLayer for Convolutional2D {
         let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
 
         // Compute kernel gradients and error signal for backpropagation in a single step to save performance
-        for b in 0..batch_size {
+        let mut batch_signals = Vec::with_capacity(batch_size);
+        let mut kernel_grads = Vec::with_capacity(batch_size);
+        let mut bias_grads = Vec::with_capacity(batch_size);
+        for _ in 0..batch_size {
+            batch_signals.push(Mutex::new(Array3::<f32>::zeros((in_features, signal_height, signal_width))));
+            kernel_grads.push(Mutex::new(Array4::<f32>::zeros((out_features, in_features, kernel_height, kernel_width))));
+            if let Some(bias) = &self.bias { 
+                bias_grads.push(Mutex::new(Array1::<f32>::zeros(bias.gradients.dim())));
+            }
+        }
+
+        (0..batch_size).into_par_iter().for_each(|b| {
+            let mut batch_signal = batch_signals[b].lock().unwrap();
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     // Kernel gradients
@@ -140,8 +165,8 @@ impl RawLayer for Convolutional2D {
 
                     let padded = pad_2d(&error_slice, (kernel_height - 1, kernel_width - 1));
                     let conv = convolve2d(&padded.view(), &kernel_slice, (1, 1));
-                    error_signal
-                        .slice_mut(s![b, in_f, .., ..])
+                    batch_signal
+                        .slice_mut(s![in_f, .., ..])
                         .scaled_add(1., &conv);
                 }
 
@@ -150,7 +175,7 @@ impl RawLayer for Convolutional2D {
                     bias.gradients[out_f] += delta.slice(s![.., out_f, .., ..]).sum();
                 }
             }
-        }
+        });
 
         // We need to crop the error signal to account for the padding added during the forward pass.
         // In the case padding was added there will be extra error values mapping to those positions, 
