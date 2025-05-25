@@ -107,10 +107,17 @@ impl RawLayer for Convolutional2D {
         let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
 
-        // Compute kernel gradients
+        let output_width = ((input_width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
+        let output_height = ((input_height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
+        let signal_width = output_width + kernel_width - 1;
+        let signal_height = output_height + kernel_height - 1;
+        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
+
+        // Compute kernel gradients and error signal for backpropagation in a single step to save performance
         for b in 0..batch_size {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
+                    // Kernel gradients
                     // Align error slice with input slice
                     let input_slice = forward_input.slice(s![b, in_f, .., ..]);
                     let error_slice = delta.slice(s![b, out_f, .., ..]);
@@ -126,36 +133,21 @@ impl RawLayer for Convolutional2D {
                     self.kernels.gradients
                         .slice_mut(s![out_f, in_f, .., ..])
                         .scaled_add(1., &grad);
-                }
-            }
-        }
 
-        // Compute bias gradients
-        if let Some(bias) = &mut self.bias { 
-            for out_f in 0..out_features {
-                bias.gradients[out_f] += delta.slice(s![.., out_f, .., ..]).sum();
-            }
-        }
-
-        // Compute loss signal for backpropagation
-        let output_width = ((input_width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
-        let output_height = ((input_height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let signal_width = output_width + kernel_width - 1;
-        let signal_height = output_height + kernel_height - 1;
-        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
-        for b in 0..batch_size {
-            for out_f in 0..out_features {
-                for in_f in 0..in_features {
-                    let delta_slice = delta.slice(s![b, out_f, .., ..]);
-
+                    // Error signal
                     // Flip over width and height dimensions (180 rotation)
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
 
-                    let padded = pad_2d(&delta_slice, (kernel_height - 1, kernel_width - 1));
+                    let padded = pad_2d(&error_slice, (kernel_height - 1, kernel_width - 1));
                     let conv = convolve2d(&padded.view(), &kernel_slice, (1, 1));
                     error_signal
                         .slice_mut(s![b, in_f, .., ..])
                         .scaled_add(1., &conv);
+                }
+
+                // Compute bias gradients
+                if let Some(bias) = &mut self.bias { 
+                    bias.gradients[out_f] += delta.slice(s![.., out_f, .., ..]).sum();
                 }
             }
         }
