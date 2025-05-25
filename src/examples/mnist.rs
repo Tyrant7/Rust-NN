@@ -63,12 +63,12 @@ pub fn run() {
     );
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
-    let epochs = 100;
+    let epochs = 3;
 
     let mut avg_costs = Vec::new();
     let mut max_costs = Vec::new();
 
-    let batch_size = 10;
+    let batch_size = 50;
     let samples = train_data.shape()[0];
 
     assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
