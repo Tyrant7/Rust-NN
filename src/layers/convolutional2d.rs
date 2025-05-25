@@ -74,11 +74,11 @@ impl RawLayer for Convolutional2D {
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let batch_outputs = (0..batch_size)
-            .map(|_| Mutex::new(Array3::<f32>::zeros((out_features, output_height, output_width))))
-            .collect::<Vec<_>>();
-        (0..batch_size).into_par_iter().for_each(|b| {
-            let mut batch_output = batch_outputs[b].lock().unwrap();
+        let mut batch_outputs = vec![Array3::<f32>::zeros((out_features, output_height, output_width))];
+        batch_outputs
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(b, batch_output)| {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, .., ..]);
@@ -98,7 +98,7 @@ impl RawLayer for Convolutional2D {
         for (b, batch) in batch_outputs.into_iter().enumerate() {
             output
                 .slice_mut(s![b, .., .., ..])
-                .assign(&batch.into_inner().unwrap());
+                .assign(&batch);
         }
 
         // Apply bias to the second dimension (features)
