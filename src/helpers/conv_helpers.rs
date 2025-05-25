@@ -47,26 +47,48 @@ pub fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
 }
 
 /// output_size and stride: (height, width)
+#[inline(always)]
 pub fn convolve2d(input: &ArrayView2<f32>, kernel: &ArrayView2<f32>, output: &mut ArrayViewMut2<f32>, stride: (usize, usize)) {
     let (k_h, k_w) = kernel.dim();
     let (s_y, s_x) = stride;
     let (i_h, i_w) = input.dim();
 
-    // We have to compute the output bounds for iteration ourselves
-    // since the kernel and input sizes may not always align
-    let o_h= (i_h - k_h) / s_y + 1;
+    let o_h = (i_h - k_h) / s_y + 1;
     let o_w = (i_w - k_w) / s_x + 1;
-    for out_y in 0..o_h {
-        for out_x in 0..o_w {
-            let mut acc = 0.0;
-            for ky in 0..k_h {
-                for kx in 0..k_w {
-                    let in_y = out_y * s_y + ky;
-                    let in_x = out_x * s_x + kx;
-                    acc += input[(in_y, in_x)] * kernel[(ky, kx)];
+
+    let input_ptr = input.as_ptr();
+    let kernel_ptr = kernel.as_ptr();
+    let output_ptr = output.as_mut_ptr();
+
+    let input_stride_y = input.strides()[0];
+    let input_stride_x = input.strides()[1];
+    let output_stride_y = output.strides()[0];
+    let output_stride_x = output.strides()[1];
+    let kernel_stride_y = kernel.strides()[0];
+    let kernel_stride_x = kernel.strides()[1];
+
+    unsafe {
+        for out_y in 0..o_h {
+            let base_y = out_y * s_y;
+            for out_x in 0..o_w {
+                let base_x = out_x * s_x;
+                let mut acc = 0.0;
+                for ky in 0..k_h {
+                    let k_offset_y = (ky as isize) * kernel_stride_y;
+                    for kx in 0..k_w {
+                        let in_y = (base_y + ky) as isize;
+                        let in_x = (base_x + kx) as isize;
+
+                        let i_offset = in_y * input_stride_y + in_x * input_stride_x;
+                        let k_offset = k_offset_y + (kx as isize) * kernel_stride_x;
+
+                        acc += *input_ptr.offset(i_offset) * *kernel_ptr.offset(k_offset);
+                    }
                 }
+
+                let o_offset = (out_y as isize) * output_stride_y + (out_x as isize) * output_stride_x;
+                *output_ptr.offset(o_offset) += acc;
             }
-            output[(out_y, out_x)] += acc;
         }
     }
 }
