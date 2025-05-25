@@ -137,7 +137,7 @@ impl RawLayer for Convolutional1D {
 
                 // Compute bias gradients
                 if let Some(bias) = &mut self.bias { 
-                    bias.gradients[out_f] += delta.slice(s![.., out_f, ..]).sum();
+                    bias.gradients[out_f] += delta.slice(s![b, out_f, ..]).sum();
                 }
             }
         }
