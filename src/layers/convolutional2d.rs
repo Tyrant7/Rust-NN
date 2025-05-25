@@ -124,7 +124,6 @@ impl RawLayer for Convolutional2D {
         let output_height = ((input_height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
         let signal_width = output_width + kernel_width - 1;
         let signal_height = output_height + kernel_height - 1;
-        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
 
         // Compute kernel gradients and error signal for backpropagation in a single step to save performance
         let mut batch_signals = Vec::with_capacity(batch_size);
@@ -132,14 +131,18 @@ impl RawLayer for Convolutional2D {
         let mut bias_grads = Vec::with_capacity(batch_size);
         for _ in 0..batch_size {
             batch_signals.push(Mutex::new(Array3::<f32>::zeros((in_features, signal_height, signal_width))));
-            kernel_grads.push(Mutex::new(Array4::<f32>::zeros((out_features, in_features, kernel_height, kernel_width))));
+            kernel_grads.push(Mutex::new(Array4::<f32>::zeros(self.kernels.gradients.dim())));
             if let Some(bias) = &self.bias { 
-                bias_grads.push(Mutex::new(Array1::<f32>::zeros(bias.gradients.dim())));
+                bias_grads.push(Mutex::new(Some(Array1::<f32>::zeros(bias.gradients.dim()))));
+            } else {
+                bias_grads.push(Mutex::new(None));
             }
         }
 
         (0..batch_size).into_par_iter().for_each(|b| {
             let mut batch_signal = batch_signals[b].lock().unwrap();
+            let mut kernel_grad = kernel_grads[b].lock().unwrap();
+            let mut bias_grad = bias_grads[b].lock().unwrap();
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     // Kernel gradients
@@ -155,7 +158,7 @@ impl RawLayer for Convolutional2D {
                     } else {
                         convolve2d(&error_slice, &input_slice, (1, 1))
                     };
-                    self.kernels.gradients
+                    kernel_grad
                         .slice_mut(s![out_f, in_f, .., ..])
                         .scaled_add(1., &grad);
 
@@ -171,11 +174,27 @@ impl RawLayer for Convolutional2D {
                 }
 
                 // Compute bias gradients
-                if let Some(bias) = &mut self.bias { 
-                    bias.gradients[out_f] += delta.slice(s![.., out_f, .., ..]).sum();
+                if let Some(bias) = &mut *bias_grad { 
+                    bias[out_f] += delta.slice(s![b, out_f, .., ..]).sum();
                 }
             }
         });
+
+        // Collect full signals
+        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
+        for (b, batch) in batch_signals.into_iter().enumerate() {
+            error_signal
+                .slice_mut(s![b, .., .., ..])
+                .assign(&batch.into_inner().unwrap());
+        }
+        for grad in kernel_grads.into_iter() {
+            self.kernels.gradients += &grad.into_inner().unwrap();
+        }
+        if let Some(bias) = &mut self.bias {
+            for grad in bias_grads.into_iter() {
+                bias.gradients += &grad.into_inner().unwrap().unwrap();
+            }
+        }
 
         // We need to crop the error signal to account for the padding added during the forward pass.
         // In the case padding was added there will be extra error values mapping to those positions, 
