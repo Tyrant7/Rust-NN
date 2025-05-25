@@ -10,12 +10,21 @@ pub fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     padded
 }
 
-pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output_size: usize, stride: usize) -> Array1<f32> {
-    let mut output = Array1::zeros(output_size);
-    let windows = input.windows_with_stride(kernel.dim(), stride);
-    for (i, window) in windows.into_iter().enumerate() {
-        output[i] += (&window * &kernel).sum();
+pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
+    let i_w = input.dim();
+    let k_w = kernel.dim();
+    
+    let output_w = (i_w - k_w) / stride + 1;
+    let mut output = Array1::zeros(output_w);
+    for out in 0..output_w {
+        let mut acc = 0.0;
+        for k in 0..k_w {
+            let in_x = out * stride + k;
+            acc += input[in_x] * kernel[k];
+        }
+        output[out] = acc;
     }
+
     output
 }
 
