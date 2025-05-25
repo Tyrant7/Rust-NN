@@ -1,5 +1,8 @@
+use std::sync::Mutex;
+
 use rand::Rng;
-use ndarray::{s, Array1, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
+use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
+use rayon::prelude::*;
 
 use crate::conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d};
 
@@ -101,10 +104,25 @@ impl RawLayer for Convolutional1D {
 
         let output_width = ((input_width - kernel_width + (2 * self.padding)) / self.stride) + 1;
         let signal_width = output_width + kernel_width - 1;
-        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
 
         // Compute kernel gradients and error signal for backpropagation in a single step to save performance
-        for b in 0..batch_size {
+        let mut batch_signals = Vec::with_capacity(batch_size);
+        let mut kernel_grads = Vec::with_capacity(batch_size);
+        let mut bias_grads = Vec::with_capacity(batch_size);
+        for _ in 0..batch_size {
+            batch_signals.push(Mutex::new(Array2::<f32>::zeros((in_features, signal_width))));
+            kernel_grads.push(Mutex::new(Array3::<f32>::zeros(self.kernels.gradients.dim())));
+            if let Some(bias) = &self.bias { 
+                bias_grads.push(Mutex::new(Some(Array1::<f32>::zeros(bias.gradients.dim()))));
+            } else {
+                bias_grads.push(Mutex::new(None));
+            }
+        }
+        
+        (0..batch_size).into_par_iter().for_each(|b| {
+            let mut batch_signal = batch_signals[b].lock().unwrap();
+            let mut kernel_grad = kernel_grads[b].lock().unwrap();
+            let mut bias_grad = bias_grads[b].lock().unwrap();
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     // Kernel gradients
@@ -120,7 +138,7 @@ impl RawLayer for Convolutional1D {
                     } else {
                         convolve1d(error_slice, input_slice, 1)
                     };
-                    self.kernels.gradients
+                    kernel_grad
                         .slice_mut(s![out_f, in_f, ..])
                         .scaled_add(1., &grad);
 
@@ -130,15 +148,31 @@ impl RawLayer for Convolutional1D {
 
                     let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
                     let conv = convolve1d(padded.view(), kernel_slice, 1);
-                    error_signal
-                        .slice_mut(s![b, in_f, ..])
+                    batch_signal
+                        .slice_mut(s![in_f, ..])
                         .scaled_add(1., &conv);
                 }
 
                 // Compute bias gradients
-                if let Some(bias) = &mut self.bias { 
-                    bias.gradients[out_f] += delta.slice(s![b, out_f, ..]).sum();
+                if let Some(bias) = &mut *bias_grad { 
+                    bias[out_f] += delta.slice(s![b, out_f, ..]).sum();
                 }
+            }
+        });
+
+        // Collect full signals
+        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
+        for (b, batch) in batch_signals.into_iter().enumerate() {
+            error_signal
+                .slice_mut(s![b, .., ..])
+                .assign(&batch.into_inner().unwrap());
+        }
+        for grad in kernel_grads.into_iter() {
+            self.kernels.gradients += &grad.into_inner().unwrap();
+        }
+        if let Some(bias) = &mut self.bias {
+            for grad in bias_grads.into_iter() {
+                bias.gradients += &grad.into_inner().unwrap().unwrap();
             }
         }
 
