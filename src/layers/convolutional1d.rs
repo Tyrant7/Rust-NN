@@ -71,8 +71,12 @@ impl RawLayer for Convolutional1D {
         // 1D convolution
         let (out_features, _, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding)) / self.stride) + 1;
-        let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
-        for b in 0..batch_size {
+        let mut batch_outputs = vec![Array2::<f32>::zeros((out_features, output_width)); batch_size];
+
+        batch_outputs
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(b, batch_output)| {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, ..]);
@@ -80,11 +84,18 @@ impl RawLayer for Convolutional1D {
 
                     let conv = convolve1d(input_slice, kernel_slice, self.stride);
 
-                    output
-                        .slice_mut(s![b, out_f, ..])
+                    batch_output
+                        .slice_mut(s![out_f, ..])
                         .scaled_add(1., &conv);
                 }
             }
+        });
+
+        let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
+        for (b, batch) in batch_outputs.into_iter().enumerate() {
+            output
+                .slice_mut(s![b, .., ..])
+                .assign(&batch);
         }
 
         // Apply bias to the second dimension (features)
@@ -106,23 +117,20 @@ impl RawLayer for Convolutional1D {
         let signal_width = output_width + kernel_width - 1;
 
         // Compute kernel gradients and error signal for backpropagation in a single step to save performance
-        let mut batch_signals = Vec::with_capacity(batch_size);
-        let mut kernel_grads = Vec::with_capacity(batch_size);
-        let mut bias_grads = Vec::with_capacity(batch_size);
-        for _ in 0..batch_size {
-            batch_signals.push(Mutex::new(Array2::<f32>::zeros((in_features, signal_width))));
-            kernel_grads.push(Mutex::new(Array3::<f32>::zeros(self.kernels.gradients.dim())));
-            if let Some(bias) = &self.bias { 
-                bias_grads.push(Mutex::new(Some(Array1::<f32>::zeros(bias.gradients.dim()))));
-            } else {
-                bias_grads.push(Mutex::new(None));
-            }
-        }
+        let mut batch_signals = vec![Array2::<f32>::zeros((in_features, signal_width)); batch_size];
+        let mut kernel_grads = vec![Array3::<f32>::zeros(self.kernels.gradients.dim()); batch_size];
+        let mut bias_grads = if let Some(b) = &self.bias {
+            vec![Some(Array1::<f32>::zeros(b.gradients.dim())); batch_size]
+        } else {
+            vec![None; batch_size]
+        };
         
-        (0..batch_size).into_par_iter().for_each(|b| {
-            let mut batch_signal = batch_signals[b].lock().unwrap();
-            let mut kernel_grad = kernel_grads[b].lock().unwrap();
-            let mut bias_grad = bias_grads[b].lock().unwrap();
+        batch_signals
+            .par_iter_mut()
+            .zip(kernel_grads.par_iter_mut())
+            .zip(bias_grads.par_iter_mut())
+            .enumerate()
+            .for_each(|(b, ((batch_signal, kernel_grad), bias_grad))| {
             for out_f in 0..out_features {
                 for in_f in 0..in_features {
                     // Kernel gradients
@@ -165,14 +173,14 @@ impl RawLayer for Convolutional1D {
         for (b, batch) in batch_signals.into_iter().enumerate() {
             error_signal
                 .slice_mut(s![b, .., ..])
-                .assign(&batch.into_inner().unwrap());
+                .assign(&batch);
         }
         for grad in kernel_grads.into_iter() {
-            self.kernels.gradients += &grad.into_inner().unwrap();
+            self.kernels.gradients += &grad;
         }
         if let Some(bias) = &mut self.bias {
-            for grad in bias_grads.into_iter() {
-                bias.gradients += &grad.into_inner().unwrap().unwrap();
+            for grad in bias_grads.into_iter().flatten() {
+                bias.gradients += &grad;
             }
         }
 

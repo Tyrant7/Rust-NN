@@ -44,9 +44,9 @@ mod profiling;
 
 // #[tokio::main]
 fn main() {
-    profiling::benchmarks::conv2d::run();
+    // profiling::benchmarks::conv2d::run();
 
-    // mnist::run();
+    mnist::run();
 
     // // Example usage of the library solving the XOR problem
     // let mut network = chain!(

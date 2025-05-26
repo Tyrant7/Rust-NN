@@ -63,9 +63,8 @@ pub fn run() {
     );
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
-    let epochs = 3;
+    let epochs = 10;
 
-    // TODO: Let's track accuracy (by %) each epoch too
     let mut avg_costs = Vec::new();
     let mut max_costs = Vec::new();
 
@@ -86,7 +85,7 @@ pub fn run() {
 
         /* thread::spawn(|| { */
         for (i, (x, label)) in reshaped_train.axis_iter(Axis(0)).zip(train_labels.iter()).enumerate() {
-            println!("batch {i}");
+            // println!("batch {i}");
 
             let mut label_encoded = Array1::from_elem(10, 0.);
             label_encoded[*label as usize] = 1.;
@@ -95,22 +94,14 @@ pub fn run() {
             let expanded = x.insert_axis(Axis(1));
             let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
 
-            let before = time.elapsed().as_millis();
-
             let pred = network.forward(&expanded_f32, true);
-
-            println!("forw: {}ms", time.elapsed().as_millis() - before);
 
             let cost = MSELoss::original(&pred.clone().into_dyn(), &label_encoded.clone().into_dyn());
             avg_cost += cost;
             max_cost = cost.max(max_cost);
-
-            let before = time.elapsed().as_millis();
             
             // Back propagation
             network.backward(&MSELoss::derivative(&pred.into_dyn(), &label_encoded.into_dyn()));
-
-            println!("back: {}ms", time.elapsed().as_millis() - before);
 
             // Gradient application
             optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
