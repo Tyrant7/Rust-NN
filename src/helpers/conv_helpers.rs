@@ -1,4 +1,4 @@
-use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, ArrayView4, ArrayViewMut2};
+use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, ArrayView4, ArrayViewMut1, ArrayViewMut2};
 
 pub fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     assert!(padding > 0);
@@ -10,12 +10,11 @@ pub fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     padded
 }
 
-pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize) -> Array1<f32> {
+pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output: &mut ArrayViewMut1<f32>, stride: usize) {
     let i_w = input.dim();
     let k_w = kernel.dim();
     
     let output_w = (i_w - k_w) / stride + 1;
-    let mut output = Array1::zeros(output_w);
     for out in 0..output_w {
         let mut acc = 0.0;
         for k in 0..k_w {
@@ -24,8 +23,6 @@ pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, stride: usize
         }
         output[out] = acc;
     }
-
-    output
 }
 
 pub fn crop_1d(input: &ArrayView1<f32>, crop: usize) -> Array1<f32> {

@@ -81,12 +81,12 @@ impl RawLayer for Convolutional1D {
                 for in_f in 0..in_features {
                     let input_slice = input.slice(s![b, in_f, ..]);
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
-
-                    let conv = convolve1d(input_slice, kernel_slice, self.stride);
-
-                    batch_output
-                        .slice_mut(s![out_f, ..])
-                        .scaled_add(1., &conv);
+                    convolve1d(
+                        input_slice, 
+                        kernel_slice, 
+                        &mut batch_output
+                            .slice_mut(s![out_f, ..]), 
+                        self.stride);
                 }
             }
         });
@@ -141,24 +141,35 @@ impl RawLayer for Convolutional1D {
                     // In some cases, the loss may actually be larger than the input due to padding
                     // In these cases, we can swap the kernel and input to achieve the desired result
                     // without causing a shape error
-                    let grad = if error_slice.dim() < input_slice.dim() {
-                        convolve1d(input_slice, error_slice, 1)
+                    if error_slice.dim() < input_slice.dim() {
+                        convolve1d(
+                            input_slice, 
+                            error_slice, 
+                            &mut kernel_grad
+                                .slice_mut(s![out_f, in_f, ..]), 
+                            1
+                        );
                     } else {
-                        convolve1d(error_slice, input_slice, 1)
+                        convolve1d(
+                            error_slice,
+                            input_slice,
+                            &mut kernel_grad
+                                .slice_mut(s![out_f, in_f, ..]),
+                            1
+                        );
                     };
-                    kernel_grad
-                        .slice_mut(s![out_f, in_f, ..])
-                        .scaled_add(1., &grad);
 
                     // Error signal
                     // Flip over width dimension (180 rotation)
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
-
                     let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
-                    let conv = convolve1d(padded.view(), kernel_slice, 1);
-                    batch_signal
-                        .slice_mut(s![in_f, ..])
-                        .scaled_add(1., &conv);
+                    convolve1d(
+                        padded.view(),
+                        kernel_slice,
+                        &mut batch_signal
+                            .slice_mut(s![in_f, ..]),
+                        1
+                    );
                 }
 
                 // Compute bias gradients

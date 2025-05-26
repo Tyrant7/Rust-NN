@@ -167,7 +167,6 @@ impl RawLayer for Convolutional2D {
                     // Error signal
                     // Flip over width and height dimensions (180 rotation)
                     let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
-
                     let padded = pad_2d(&error_slice, (kernel_height - 1, kernel_width - 1));
                     convolve2d(
                         &padded.view(), 
