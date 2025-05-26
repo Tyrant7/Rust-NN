@@ -2,15 +2,15 @@
 
 ## Currently working on:
 
--   Data loading from file
--   Solve MNIST as a sample problem to show off some cool capability
+-   Softmax: good resource [here](https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/)
+-   CrossEntropyLoss
 
 ## Next up:
 
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   More safety assertions throughout codebase, especially within layers
--   CPU multithreading
+-   Generic IDX file reading solution
 
 ## Layer types:
 
@@ -27,13 +27,10 @@
 
 -   Gradient clipping
 -   Pretty layer printouts
--   Additional sample problems, harder than XOR
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
--   Helper modules for things like Softmax
--   Helpers for dataloading and data management
 -   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
 
 ## Fixes
 
--   None at the moment
+-   Adapt quick convolution for 1D
