@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 
 use colored::Colorize;
+use ndarray::Array2;
 use ndarray::Array4;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
@@ -37,6 +38,8 @@ pub fn run() {
     let test_labels_path = "data/train-labels.idx1-ubyte";
     let (test_data, test_labels) = read_data(test_data_path, test_labels_path);
 
+    let num_classes = 10;
+
     // Example usage of the library solving the MNIST handwritten digit dataset
     let mut network = chain!(
         // batch, 1, 28, 28
@@ -59,14 +62,12 @@ pub fn run() {
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
-        Sigmoid
     );
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
     let epochs = 10;
 
     let mut avg_costs = Vec::new();
-    let mut max_costs = Vec::new();
 
     let batch_size = 50;
     let samples = train_data.shape()[0];
@@ -76,19 +77,21 @@ pub fn run() {
 
     let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
+    let reshaped_labels = train_labels.to_shape(new_shape).unwrap();
 
     let time = std::time::Instant::now();
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
-        let mut max_cost = 0.;
 
         /* thread::spawn(|| { */
-        for (i, (x, label)) in reshaped_train.axis_iter(Axis(0)).zip(train_labels.iter()).enumerate() {
+        for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
             // println!("batch {i}");
 
-            let mut label_encoded = Array1::from_elem(10, 0.);
-            label_encoded[*label as usize] = 1.;
+            let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
+            for (i, &label) in labels.iter().enumerate() {
+                label_encoded[[i, label as usize]] = 1.;
+            }
 
             // go from shape (28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1));
@@ -96,15 +99,14 @@ pub fn run() {
 
             let pred = network.forward(&expanded_f32, true);
 
-            let cost = MSELoss::original(&pred.clone().into_dyn(), &label_encoded.clone().into_dyn());
-            avg_cost += cost;
-            max_cost = cost.max(max_cost);
+            let cost = MSELoss::original(&pred.clone(), &label_encoded.clone());
+            avg_cost += cost.sum() / batch_size as f32;
             
             // Back propagation
-            network.backward(&MSELoss::derivative(&pred.into_dyn(), &label_encoded.into_dyn()));
+            network.backward(&MSELoss::derivative(&pred, &label_encoded));
 
             // Gradient application
-            optimizer.step(&mut network.get_learnable_parameters(), train_data.len());
+            optimizer.step(&mut network.get_learnable_parameters(), batch_size);
 
             // Zero gradients before next epoch
             optimizer.zero_gradients(&mut network.get_learnable_parameters());
@@ -112,15 +114,14 @@ pub fn run() {
         /* }); */
 
         avg_costs.push(avg_cost);
-        max_costs.push(max_cost);
 
-        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / train_data.len() as f32);
+        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / num_batches as f32);
     }
 
     println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
 
     println!("Generating costs chart");
-    let _ = graphs::costs_candle(&avg_costs, &max_costs);
+    let _ = graphs::costs_candle(&avg_costs, &vec![0.; avg_costs.len()]);
 }
 
 fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
