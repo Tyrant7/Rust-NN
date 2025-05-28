@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 
 use colored::Colorize;
+use ndarray::Array2;
 use ndarray::Array4;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
@@ -53,7 +54,6 @@ pub fn run() {
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
-        Sigmoid
     );
 
     let batch_size = 50;
@@ -64,21 +64,24 @@ pub fn run() {
 
     let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
+    let reshaped_labels = train_labels.to_shape(new_shape).unwrap();
 
     benchmark(&mut |i| {
         println!("Iteration {i}");
 
         // Only do 10 batches for sampling
-        for (x, label) in reshaped_train.axis_iter(Axis(0)).zip(train_labels.iter()).take(10) {
-            let mut label_encoded = Array1::from_elem(10, 0.);
-            label_encoded[*label as usize] = 1.;
+        for (x, labels) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).take(10) {
+            let mut label_encoded = Array2::<f32>::zeros((batch_size, 10));
+            for (i, &label) in labels.iter().enumerate() {
+                label_encoded[[i, label as usize]] = 1.;
+            }
 
             // go from shape (28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1));
             let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
 
             let pred = network.forward(&expanded_f32, true);
-            network.backward(&MSELoss::derivative(&pred.into_dyn(), &label_encoded.into_dyn()));
+            network.backward(&MSELoss::derivative(&pred, &label_encoded));
         }
     }, 10, "forward + backward 10 batches");
 }
