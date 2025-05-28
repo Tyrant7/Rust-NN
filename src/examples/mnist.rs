@@ -95,7 +95,7 @@ pub fn run() {
                 label_encoded[[i, label as usize]] = 1.;
             }
 
-            // go from shape (28, 28) to (batch, 1, 28, 28)
+            // Go from (batch, 28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1));
             let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
 
