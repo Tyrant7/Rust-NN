@@ -3,8 +3,8 @@ use ndarray::{Array1, Array2};
 pub trait LossFunction {
     /// Data should be given in (batch, width) format.
     /// Returns an array of loss for each batch. 
-    fn original(pred: &Array2<f32>, label: &Array2<f32>) -> Array1<f32>;
-    fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32>;
+    fn original(preds: &Array2<f32>, labels: &Array2<f32>) -> Array1<f32>;
+    fn derivative(preds: &Array2<f32>, labels: &Array2<f32>) -> Array2<f32>;
 }
 
 pub mod binary_cross_entropy_loss;

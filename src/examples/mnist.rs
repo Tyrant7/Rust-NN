@@ -76,8 +76,10 @@ pub fn run() {
     let num_batches = samples / batch_size;
 
     let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
+    let new_label_shape = (num_batches, batch_size);
+
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
-    let reshaped_labels = train_labels.to_shape(new_shape).unwrap();
+    let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
 
     let time = std::time::Instant::now();
 
@@ -86,7 +88,7 @@ pub fn run() {
 
         /* thread::spawn(|| { */
         for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
-            // println!("batch {i}");
+            println!("batch {i}");
 
             let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
             for (i, &label) in labels.iter().enumerate() {
@@ -100,6 +102,11 @@ pub fn run() {
             let pred = network.forward(&expanded_f32, true);
 
             let cost = MSELoss::original(&pred.clone(), &label_encoded.clone());
+
+            println!("c: {:?}", cost);
+            println!("pred: {:?}", pred);
+            println!("enc: {:?}", &label_encoded);
+
             avg_cost += cost.sum() / batch_size as f32;
             
             // Back propagation

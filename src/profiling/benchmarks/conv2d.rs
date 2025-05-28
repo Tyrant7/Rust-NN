@@ -63,8 +63,10 @@ pub fn run() {
     let num_batches = samples / batch_size;
 
     let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
+    let new_label_shape = (num_batches, batch_size);
+
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
-    let reshaped_labels = train_labels.to_shape(new_shape).unwrap();
+    let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
 
     benchmark(&mut |i| {
         println!("Iteration {i}");
