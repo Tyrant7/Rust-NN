@@ -65,10 +65,11 @@ pub fn run() {
         // batch, 10
     );
 
-    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
+    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.03, 0.9);
     let epochs = 10;
 
     let mut avg_costs = Vec::new();
+    let mut avg_accuracies = Vec::new();
 
     let batch_size = 50;
     let samples = train_data.shape()[0];
@@ -86,6 +87,7 @@ pub fn run() {
 
     for epc in 0..epochs {
         let mut avg_cost = 0.;
+        let mut avg_acc = 0.;
 
         for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
             println!("batch {i}");
@@ -102,10 +104,29 @@ pub fn run() {
             let pred = network.forward(&expanded_f32, true);
             let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
 
-            println!("cavg: {:?}", cost.sum() / batch_size as f32);
+            // println!("pred-0: {:?}", pred.slice(s![0, ..]));
+            // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
+            
+            // println!("cavg: {:?}", cost.sum() / batch_size as f32);
 
             avg_cost += cost.sum() / batch_size as f32;
             
+            // Compute accuracy for this batch
+            let mut batch_acc = 0.;
+            for (i, (&label, preds)) in labels.iter().zip(pred.axis_iter(Axis(0))).enumerate() {
+                // Check if our argmax is the same as this batch's label
+                if preds
+                    .iter()
+                    .enumerate()
+                    .max_by(|&x, &y| x.1.partial_cmp(y.1).unwrap()).unwrap().0 == label as usize {
+                    batch_acc += 1.;
+                }
+            }
+            batch_acc /= batch_size as f32;
+            avg_acc += batch_acc;
+
+            // println!("aavg: {:.2}%", batch_acc * 100.);
+
             // Back propagation
             let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
             network.backward(&back);
@@ -118,9 +139,11 @@ pub fn run() {
         }
 
         avg_cost /= num_batches as f32;
+        avg_acc /= num_batches as f32;
         avg_costs.push(avg_cost);
+        avg_accuracies.push(avg_acc);
 
-        println!("Epoch {} avg cost: {}", epc + 1, avg_cost);
+        println!("Epoch {} | Avg cost: {:.6} | Avg acc: {:.2}%", epc + 1, avg_cost, avg_acc * 100.);
     }
 
     println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
