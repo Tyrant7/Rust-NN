@@ -6,6 +6,7 @@ use ndarray::Array2;
 use ndarray::Array4;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
+use ndarray_stats::QuantileExt;
 
 use crate::chain;
 use crate::graphs;
@@ -104,6 +105,9 @@ pub fn run() {
             let pred = network.forward(&expanded_f32, true);
             let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
 
+            // The problem is here
+            println!("preds: {:?}", pred);
+
             // println!("pred-0: {:?}", pred.slice(s![0, ..]));
             // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
 
@@ -113,19 +117,17 @@ pub fn run() {
             
             // Compute accuracy for this batch
             let mut batch_acc = 0.;
-            for (i, (&label, preds)) in labels.iter().zip(pred.axis_iter(Axis(0))).enumerate() {
-                // Check if our argmax is the same as this batch's label
-                if preds
-                    .iter()
-                    .enumerate()
-                    .max_by(|&x, &y| x.1.partial_cmp(y.1).unwrap()).unwrap().0 == label as usize {
+            for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
+                if preds.argmax().unwrap() == label as usize {
+                    // println!("p: {:?}", preds);
+                    // println!("l: {:?}", label);
                     batch_acc += 1.;
                 }
             }
             batch_acc /= batch_size as f32;
             avg_acc += batch_acc;
 
-            // println!("aavg: {:.2}%", batch_acc * 100.);
+            println!("aavg: {:.2}%", batch_acc * 100.);
 
             // Back propagation
             let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
