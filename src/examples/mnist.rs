@@ -18,6 +18,7 @@ use crate::layers::MaxPool2D;
 use crate::layers::ReLU;
 
 use crate::layers::Sigmoid;
+use crate::loss_functions::CrossEntropyWithLogitsLoss;
 use crate::loss_functions::LossFunction;
 use crate::loss_functions::MSELoss;
 use crate::optimizers::Optimizer;
@@ -62,7 +63,6 @@ pub fn run() {
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
-        Sigmoid,
     );
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
@@ -100,19 +100,15 @@ pub fn run() {
             let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
 
             let pred = network.forward(&expanded_f32, true);
-
-            let cost = MSELoss::original(&pred.clone().into_dimensionality().unwrap(), &label_encoded.clone());
-
-            // println!("c: {:?}", cost);
-            // println!("pred: {:?}", &pred);
+            let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
 
             println!("cavg: {:?}", cost.sum() / batch_size as f32);
 
             avg_cost += cost.sum() / batch_size as f32;
             
             // Back propagation
-            let back = MSELoss::derivative(&pred.into_dimensionality().unwrap(), &label_encoded);
-            network.backward(&back.into_dyn());
+            let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
+            network.backward(&back);
 
             // Gradient application
             optimizer.step(&mut network.get_learnable_parameters(), batch_size);

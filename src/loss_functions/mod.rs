@@ -11,7 +11,7 @@ pub mod binary_cross_entropy_loss;
 pub use binary_cross_entropy_loss::BCELoss;
 
 pub mod cross_entroy_loss;
-pub use cross_entroy_loss::CrossEntropyLoss;
+pub use cross_entroy_loss::CrossEntropyWithLogitsLoss;
 
 pub mod mean_squared_error_loss;
 pub use mean_squared_error_loss::MSELoss;
