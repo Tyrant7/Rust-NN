@@ -106,7 +106,7 @@ pub fn run() {
 
             // println!("pred-0: {:?}", pred.slice(s![0, ..]));
             // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
-            
+
             // println!("cavg: {:?}", cost.sum() / batch_size as f32);
 
             avg_cost += cost.sum() / batch_size as f32;
