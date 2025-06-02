@@ -256,6 +256,36 @@ mod tests {
     }
 
     #[test]
+    fn forward_multibatch() {
+        // (out_features, in_features, width)
+        let kernels = Array3::from_shape_vec((1, 1, 2), vec![
+            1., 1.,
+        ]).unwrap();
+        let biases = Array1::from_elem(1, 1.);
+        let mut conv = Convolutional1D::new_from_kernels(kernels, Some(biases), 1, 0);
+
+        // (batch_size, features, width)
+        let input = Array3::<f32>::from_shape_vec((2, 1, 3), vec![
+            // Batch 1
+            0., 1., 2., 
+
+            // Batch 2
+            -1.,-1.,-2., 
+        ]).unwrap();
+        let output = conv.forward(&input, false);
+        
+        let target = Array3::<f32>::from_shape_vec((2, 1, 2), vec![
+            // Batch 1
+            2., 4.,
+
+            // Batch 2
+            -1., -2.,
+        ]).unwrap();
+        
+        assert_eq!(output, target);
+    }
+
+    #[test]
     fn backward() {
         let kernels = Array3::from_elem((2, 2, 2), 1.);
         let bias = Array1::ones(2);

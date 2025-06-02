@@ -74,7 +74,8 @@ impl RawLayer for Convolutional2D {
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let mut batch_outputs = vec![Array3::<f32>::zeros((out_features, output_height, output_width))];
+        let mut batch_outputs = vec![Array3::<f32>::zeros((out_features, output_height, output_width)); batch_size];
+        
         batch_outputs
             .par_iter_mut()
             .enumerate()
@@ -299,6 +300,40 @@ mod tests {
         let target = Array4::<f32>::from_shape_vec((1, 1, 2, 3), vec![
             13., 27., 3.,
             45., 67., 11.,
+        ]).unwrap();
+        
+        assert_eq!(output, target);
+    }
+
+    #[test]
+    fn forward_multibatch() {
+        // (out_features, in_features, height, width)
+        let kernels = Array4::from_shape_vec((1, 1, 2, 2), vec![
+            // in 1
+            1., 1.,
+            1., 1.,
+        ]).unwrap();
+        let biases = Array1::from_elem(1, 1.);
+        let mut conv = Convolutional2D::new_from_kernels(kernels, Some(biases), (1, 1), (0, 0));
+
+        // (batch_size, features, height, width)
+        let input = Array4::<f32>::from_shape_vec((2, 1, 2, 3), vec![
+            // Batch 1
+            0., 1., 2., 
+            4., 5., 6., 
+
+            // Batch 2
+            0., 0., 0., 
+            -1.,-1.,-2.,
+        ]).unwrap();
+        let output = conv.forward(&input, false);
+        
+        let target = Array4::<f32>::from_shape_vec((2, 1, 1, 2), vec![
+            // Batch 1
+            11., 15.,
+
+            // Batch 2
+            -1., -2.,
         ]).unwrap();
         
         assert_eq!(output, target);

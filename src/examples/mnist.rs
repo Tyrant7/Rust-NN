@@ -105,7 +105,6 @@ pub fn run() {
 
             println!("c: {:?}", cost);
             println!("pred: {:?}", pred);
-            println!("enc: {:?}", &label_encoded);
 
             avg_cost += cost.sum() / batch_size as f32;
             
