@@ -21,7 +21,7 @@ pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output: &mut 
             let in_x = out * stride + k;
             acc += input[in_x] * kernel[k];
         }
-        output[out] = acc;
+        output[out] += acc;
     }
 }
 

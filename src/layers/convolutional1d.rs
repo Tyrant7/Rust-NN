@@ -217,18 +217,33 @@ mod tests {
 
     #[test]
     fn forward() {
-        let kernels = Array3::from_shape_fn((2, 2, 2), |(k, _in, _i)| if k == 0 { 1. } else { 2. });
+        // (out_feature, in_feature, width)
+        let kernels = Array3::from_shape_vec((2, 2, 2), vec![
+            // out 1 in 1
+            1., 1.,
+            // out 1 in 2
+            1., 1.,
+            // out 2 in 1
+            2., 2.,
+            // out 2 in 2
+            2., 2.,
+        ]).unwrap();
         let mut conv = Convolutional1D::new_from_kernels(kernels, None, 1, 0);
 
-        let input = Array3::<f32>::from_shape_vec((1, 2, 7), vec![
-            0., 1., 2., 3., 4., 5., 6.,
-            0., 2., 4., 6., 8., 10., 12.,
+        // (batch, in_feature, width)
+        let input = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
+            // feature 1
+            0., 1., 2., 3., 4., 5.,
+            // feature 2
+            0., 2., 4., 6., 8., 10.,
         ]).unwrap();
         let output = conv.forward(&input, false);
         
-        let target = Array3::<f32>::from_shape_vec((1, 2, 6), vec![
-            3.,  9., 15., 21., 27., 33.,
-            6., 18., 30., 42., 54., 66.,
+        let target = Array3::<f32>::from_shape_vec((1, 2, 5), vec![
+            // feature 1
+            3.,  9., 15., 21., 27.,
+            // feature 2
+            6., 18., 30., 42., 54.,
         ]).unwrap();
         
         assert_eq!(output, target);
