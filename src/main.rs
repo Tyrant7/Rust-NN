@@ -42,7 +42,6 @@ use examples::mnist;
 
 mod profiling;
 
-// #[tokio::main]
 fn main() {
     // profiling::benchmarks::conv2d::run();
 
@@ -77,7 +76,6 @@ fn main() {
     //     let mut avg_cost = 0.;
     //     let mut max_cost = 0.;
 
-    //     /* thread::spawn(|| { */
     //     // Iterate over our entire dataset to collect gradients before applying them
     //     for (x, label) in data.iter() {
     //         let x = Array2::from_shape_vec((1, x.len()), x.to_vec()).unwrap();
@@ -92,7 +90,6 @@ fn main() {
     //         // Back propagation
     //         network.backward(&MSELoss::derivative(&pred, &label));
     //     }
-    //     /* }); */
 
     //     avg_costs.push(avg_cost);
     //     max_costs.push(max_cost);

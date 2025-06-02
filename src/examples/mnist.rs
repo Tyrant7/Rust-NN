@@ -62,6 +62,7 @@ pub fn run() {
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
+        Sigmoid,
     );
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.01, 0.9);
@@ -86,7 +87,6 @@ pub fn run() {
     for epc in 0..epochs {
         let mut avg_cost = 0.;
 
-        /* thread::spawn(|| { */
         for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
             println!("batch {i}");
 
@@ -101,15 +101,18 @@ pub fn run() {
 
             let pred = network.forward(&expanded_f32, true);
 
-            let cost = MSELoss::original(&pred.clone(), &label_encoded.clone());
+            let cost = MSELoss::original(&pred.clone().into_dimensionality().unwrap(), &label_encoded.clone());
 
-            println!("c: {:?}", cost);
-            println!("pred: {:?}", pred);
+            // println!("c: {:?}", cost);
+            // println!("pred: {:?}", &pred);
+
+            println!("cavg: {:?}", cost.sum() / batch_size as f32);
 
             avg_cost += cost.sum() / batch_size as f32;
             
             // Back propagation
-            network.backward(&MSELoss::derivative(&pred, &label_encoded));
+            let back = MSELoss::derivative(&pred.into_dimensionality().unwrap(), &label_encoded);
+            network.backward(&back.into_dyn());
 
             // Gradient application
             optimizer.step(&mut network.get_learnable_parameters(), batch_size);
@@ -117,11 +120,11 @@ pub fn run() {
             // Zero gradients before next epoch
             optimizer.zero_gradients(&mut network.get_learnable_parameters());
         }
-        /* }); */
 
+        avg_cost /= num_batches as f32;
         avg_costs.push(avg_cost);
 
-        println!("Epoch {} avg cost: {}", epc + 1, avg_cost / num_batches as f32);
+        println!("Epoch {} avg cost: {}", epc + 1, avg_cost);
     }
 
     println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
