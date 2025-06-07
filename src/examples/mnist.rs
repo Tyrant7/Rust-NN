@@ -72,7 +72,7 @@ pub fn run() {
     let mut avg_costs = Vec::new();
     let mut avg_accuracies = Vec::new();
 
-    let batch_size = 5;
+    let batch_size = 50;
     let samples = train_data.shape()[0];
 
     assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
@@ -87,11 +87,12 @@ pub fn run() {
     let time = std::time::Instant::now();
 
     for epc in 0..epochs {
+        let epoch_time = std::time::Instant::now();
         let mut avg_cost = 0.;
         let mut avg_acc = 0.;
 
         for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
-            println!("batch {i}");
+            let batch_time = std::time::Instant::now();
 
             let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
             for (i, &label) in labels.iter().enumerate() {
@@ -103,18 +104,8 @@ pub fn run() {
 
             let pred = network.forward(&expanded, true);
             let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
-
-            // The problem is here
-            println!("preds: {:?}", pred);
-            // println!("model: {:?}", network.inner());
-
-            // println!("pred-0: {:?}", pred.slice(s![0, ..]));
-            // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
-
-            // println!("cavg: {:?}", cost);
-
             avg_cost += cost;
-            
+
             // Compute accuracy for this batch
             let mut batch_acc = 0.;
             for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
@@ -125,13 +116,10 @@ pub fn run() {
             batch_acc /= batch_size as f32;
             avg_acc += batch_acc;
 
-            println!("aavg: {:.2}%", batch_acc * 100.);
+            println!("Batch {i:0>3} | avg loss: {cost:.6} | avg acc: {:.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
 
             // Back propagation
             let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
-
-            println!("back: {:#?}", back);
-
             network.backward(&back);
 
             // Gradient application
@@ -146,7 +134,9 @@ pub fn run() {
         avg_costs.push(avg_cost);
         avg_accuracies.push(avg_acc);
 
-        println!("Epoch {} | Avg cost: {:.6} | Avg acc: {:.2}%", epc + 1, avg_cost, avg_acc * 100.);
+        println!("{}", "-".repeat(50));
+        println!("Epoch {} | avg loss: {:.6} | avg acc: {:.2}% | time: {:.0}ms", epc + 1, avg_cost, avg_acc * 100., epoch_time.elapsed().as_millis());
+        println!("{}", "-".repeat(50));
     }
 
     println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
