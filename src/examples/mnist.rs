@@ -116,7 +116,7 @@ pub fn run() {
             batch_acc /= batch_size as f32;
             avg_acc += batch_acc;
 
-            println!("Batch {i:0>3} | avg loss: {cost:.6} | avg acc: {:.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
+            println!("Batch {i:>3} | avg loss: {cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
 
             // Back propagation
             let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
