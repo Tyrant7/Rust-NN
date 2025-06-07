@@ -99,14 +99,14 @@ pub fn run() {
             }
 
             // Go from (batch, 28, 28) to (batch, 1, 28, 28)
-            let expanded = x.insert_axis(Axis(1));
-            let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
+            let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-            let pred = network.forward(&expanded_f32, true);
+            let pred = network.forward(&expanded, true);
             let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
 
             // The problem is here
             println!("preds: {:?}", pred);
+            // println!("model: {:?}", network.inner());
 
             // println!("pred-0: {:?}", pred.slice(s![0, ..]));
             // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
@@ -119,8 +119,6 @@ pub fn run() {
             let mut batch_acc = 0.;
             for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
                 if preds.argmax().unwrap() == label as usize {
-                    // println!("p: {:?}", preds);
-                    // println!("l: {:?}", label);
                     batch_acc += 1.;
                 }
             }
@@ -131,6 +129,9 @@ pub fn run() {
 
             // Back propagation
             let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
+
+            println!("back: {:#?}", back);
+
             network.backward(&back);
 
             // Gradient application

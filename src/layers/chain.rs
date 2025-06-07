@@ -25,6 +25,10 @@ where
             next,
         }
     }
+
+    pub fn inner(&self) -> &L1 {
+        &self.inner
+    }
 }
 
 impl<L1, L2> CompositeLayer for Chain<L1, L2>
