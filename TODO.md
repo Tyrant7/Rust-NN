@@ -9,6 +9,7 @@
 
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
+-   Utility for initializing weights and biases
 -   More safety assertions throughout codebase, especially within layers
 -   Generic IDX file reading solution
 
