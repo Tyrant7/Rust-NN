@@ -111,9 +111,9 @@ pub fn run() {
             // println!("pred-0: {:?}", pred.slice(s![0, ..]));
             // println!("labels: {:?}", &label_encoded.slice(s![0, ..]));
 
-            // println!("cavg: {:?}", cost.sum() / batch_size as f32);
+            // println!("cavg: {:?}", cost);
 
-            avg_cost += cost.sum() / batch_size as f32;
+            avg_cost += cost;
             
             // Compute accuracy for this batch
             let mut batch_acc = 0.;
@@ -135,7 +135,7 @@ pub fn run() {
             network.backward(&back);
 
             // Gradient application
-            optimizer.step(&mut network.get_learnable_parameters(), batch_size);
+            optimizer.step(&mut network.get_learnable_parameters());
 
             // Zero gradients before next epoch
             optimizer.zero_gradients(&mut network.get_learnable_parameters());

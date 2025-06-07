@@ -2,8 +2,10 @@ use ndarray::{Array1, Array2};
 
 pub trait LossFunction {
     /// Data should be given in (batch, width) format.
-    /// Returns an array of loss for each batch. 
-    fn original(preds: &Array2<f32>, labels: &Array2<f32>) -> Array1<f32>;
+    /// Returns the mean loss for each sample in the batch. 
+    fn original(preds: &Array2<f32>, labels: &Array2<f32>) -> f32;
+    /// Data should be given in (batch, width) format.
+    /// Returns the average gradient over the batch to avoid scaling gradients with larger batch sizes. 
     fn derivative(preds: &Array2<f32>, labels: &Array2<f32>) -> Array2<f32>;
 }
 

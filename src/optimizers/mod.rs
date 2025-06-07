@@ -1,7 +1,7 @@
 use crate::layers::LearnableParameter;
 
 pub trait Optimizer {
-    fn step(&mut self, parameters: &mut [LearnableParameter], n_samples: usize);
+    fn step(&mut self, parameters: &mut [LearnableParameter]);
     fn zero_gradients(&self, parameters: &mut [LearnableParameter]) {
         parameters.iter_mut().for_each(|p| p.zero_grads());
     }
