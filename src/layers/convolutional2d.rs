@@ -30,10 +30,10 @@ impl Convolutional2D {
         let mut rng = rand::rng();
 
         let kernels = Array4::from_shape_fn((out_features, in_features, kernel_size.0, kernel_size.1), 
-            |_| rng.random_range(-1.0..1.)
+            |_| rng.random_range(-0.1..0.1)
         );
         let bias = match use_bias {
-            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-1.0..1.))),
+            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-0.1..0.1))),
             false => None,
         };
         

@@ -33,10 +33,10 @@ impl Linear {
         let mut rng = rand::rng();
 
         let weights = ParameterGroup::new(
-            Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-1.0..1.))
+            Array2::from_shape_fn((outputs, inputs), |_| rng.random_range(-0.1..0.1))
         );
         let bias = ParameterGroup::new(
-            Array2::from_shape_fn((1, outputs), |_| rng.random_range(-1.0..1.))
+            Array2::from_shape_fn((1, outputs), |_| rng.random_range(-0.1..0.1))
         );
         Linear {
             weights,

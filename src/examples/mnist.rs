@@ -72,7 +72,7 @@ pub fn run() {
     let mut avg_costs = Vec::new();
     let mut avg_accuracies = Vec::new();
 
-    let batch_size = 50;
+    let batch_size = 5;
     let samples = train_data.shape()[0];
 
     assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
