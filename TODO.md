@@ -2,14 +2,12 @@
 
 ## Currently working on:
 
--   Softmax: good resource [here](https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/)
--   CrossEntropyLoss
+-   Utility for initializing weights and biases
 
 ## Next up:
 
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
--   Utility for initializing weights and biases
 -   More safety assertions throughout codebase, especially within layers
 -   Generic IDX file reading solution
 
@@ -31,6 +29,7 @@
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
 -   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+-   Data augmentation features
 
 ## Fixes
 
