@@ -9,7 +9,7 @@ impl LossFunction for BCELoss {
         let epsilon = 1e-12;
         let pred = pred.mapv(|x| x.clamp(epsilon, 1. - epsilon));
         let loss = -(label * pred.ln() + (1. - label) * (1. - pred).ln());
-        loss.sum_axis(Axis(1)).sum_axis(Axis(1)).mean().unwrap()
+        loss.sum_axis(Axis(1)).mean().unwrap()
     }
 
     fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32> {

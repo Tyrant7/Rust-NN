@@ -9,7 +9,7 @@ impl LossFunction for MSELoss {
         for (b, (pred, label)) in preds.axis_iter(Axis(0)).zip(labels.axis_iter(Axis(0))).enumerate() {
             output[b] = (&label - &pred).pow2().sum();
         }
-        output.sum_axis(Axis(1)).mean().unwrap()
+        output.mean().unwrap()
     }
 
     fn derivative(pred: &Array2<f32>, label: &Array2<f32>) -> Array2<f32> {

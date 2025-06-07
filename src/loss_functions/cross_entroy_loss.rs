@@ -15,7 +15,7 @@ impl LossFunction for CrossEntropyWithLogitsLoss {
         let log_sum_exp = shifted.map_axis(Axis(1), |row| row.exp().sum().ln());
         // (batch_size)
         let target_logit = (shifted * label).sum_axis(Axis(1));
-        (log_sum_exp - target_logit).sum_axis(Axis(1)).mean().unwrap()
+        (log_sum_exp - target_logit).mean().unwrap()
     }
 
     /// This loss function expects raw logits, performing the softmax step as part of itself in order to simplify inner calculations
@@ -32,6 +32,7 @@ impl LossFunction for CrossEntropyWithLogitsLoss {
         let soft = exp / sum;
 
         // Gradient of cross-entropy with softmax = softmax - label
+        // Averaged over the batch
         (soft - label) / (pred.dim().0 as f32)
     }
 }
