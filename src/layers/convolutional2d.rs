@@ -4,7 +4,7 @@ use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
 
-use crate::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d};
+use crate::{conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helpers::initialize_weights::kaiming_initialization};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -27,16 +27,11 @@ impl Convolutional2D {
         stride: (usize, usize), 
         padding: (usize, usize),
     ) -> Self {
-        let mut rng = rand::rng();
-
-        let kernels = Array4::from_shape_fn((out_features, in_features, kernel_size.0, kernel_size.1), 
-            |_| rng.random_range(-0.1..0.1)
-        );
+        let kernels = kaiming_initialization((out_features, in_features, kernel_size.0, kernel_size.1), 1);
         let bias = match use_bias {
-            true => Some(Array1::from_shape_fn(out_features, |_| rng.random_range(-0.1..0.1))),
+            true => Some(Array1::zeros(out_features)),
             false => None,
         };
-        
         Convolutional2D::new_from_kernels(kernels, bias, stride, padding)
     }
 
