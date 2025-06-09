@@ -2,7 +2,7 @@
 
 ## Currently working on:
 
--   Utility for initializing weights and biases
+-   Utility for initializing weights and biases (Kaiming He Initialization)
 
 ## Next up:
 
