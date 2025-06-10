@@ -2,11 +2,13 @@
 
 ## Currently working on:
 
--   More safety assertions throughout codebase, especially within layers
--   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+-   Separate train and test loops for MNIST
+-   Ability to save and load model states
 
 ## Next up:
 
+-   More safety assertions throughout codebase, especially within layers
+-   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   Generic IDX file reading solution
