@@ -66,7 +66,7 @@ pub fn run() {
         // batch, 10
     );
 
-    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.03, 0.9);
+    let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.001, 0.9);
     let epochs = 10;
 
     let mut avg_costs = Vec::new();

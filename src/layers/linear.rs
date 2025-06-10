@@ -1,7 +1,7 @@
 use rand::Rng;
 use ndarray::{Array2, ArrayView2, Axis, Ix2};
 
-use crate::helpers::initialize_weights::kaiming_initialization;
+use crate::helpers::initialize_weights::kaiming_normal;
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -33,7 +33,7 @@ impl Linear {
         outputs: usize, 
     ) -> Linear {
         let weights = ParameterGroup::new(
-            kaiming_initialization((outputs, inputs), 1)
+            kaiming_normal((outputs, inputs), 1)
         );
         let bias = ParameterGroup::new(
             Array2::zeros((1, outputs))
