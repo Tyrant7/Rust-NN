@@ -69,8 +69,11 @@ pub fn run() {
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.001, 0.9);
     let epochs = 10;
 
-    let mut avg_costs = Vec::new();
-    let mut avg_accuracies = Vec::new();
+    let mut avg_train_costs = Vec::new();
+    let mut avg_train_accuracies = Vec::new();
+
+    let mut avg_test_costs = Vec::new();
+    let mut avg_test_accuracies = Vec::new();
 
     let batch_size = 50;
     let samples = train_data.shape()[0];
@@ -83,6 +86,16 @@ pub fn run() {
 
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
     let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
+
+    let test_samples = test_data.shape()[0];
+    assert!(test_samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
+    let num_test_batches = test_samples / batch_size;
+
+    let new_test_shape = (num_test_batches, batch_size, test_data.shape()[1], test_data.shape()[2]);
+    let new_test_label_shape = (num_test_batches, batch_size);
+
+    let reshaped_test = test_data.to_shape(new_test_shape).unwrap();
+    let reshaped_test_labels = test_labels.to_shape(new_test_label_shape).unwrap();
 
     let time = std::time::Instant::now();
 
@@ -131,18 +144,63 @@ pub fn run() {
 
         avg_cost /= num_batches as f32;
         avg_acc /= num_batches as f32;
-        avg_costs.push(avg_cost);
-        avg_accuracies.push(avg_acc);
+        avg_train_costs.push(avg_cost);
+        avg_train_accuracies.push(avg_acc);
+
+        println!("Starting test");
+
+        let mut avg_test_cost = 0.;
+        let mut avg_test_acc = 0.;
+
+        for (i, (x, labels)) in reshaped_test.axis_iter(Axis(0)).zip(reshaped_test_labels.axis_iter(Axis(0))).enumerate() {
+            let batch_time = std::time::Instant::now();
+
+            let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
+            for (i, &label) in labels.iter().enumerate() {
+                label_encoded[[i, label as usize]] = 1.;
+            }
+
+            // Go from (batch, 28, 28) to (batch, 1, 28, 28)
+            let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
+
+            let pred = network.forward(&expanded, false);
+            let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
+            avg_test_cost += cost;
+
+            // Compute accuracy for this batch
+            let mut batch_acc = 0.;
+            for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
+                if preds.argmax().unwrap() == label as usize {
+                    batch_acc += 1.;
+                }
+            }
+            batch_acc /= batch_size as f32;
+            avg_test_acc += batch_acc;
+
+            println!("Batch {i:>3} | avg loss: {cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
+        }
+
+        avg_test_cost /= num_batches as f32;
+        avg_test_acc /= num_batches as f32;
+        avg_test_costs.push(avg_test_cost);
+        avg_test_accuracies.push(avg_test_acc);
 
         println!("{}", "-".repeat(50));
-        println!("Epoch {} | avg loss: {:.6} | avg acc: {:.2}% | time: {:.0}ms", epc + 1, avg_cost, avg_acc * 100., epoch_time.elapsed().as_millis());
+        println!("Epoch {} | avg loss: {:.6} | avg acc: {:.2}% | avg test loss: {:.6} | avg test acc: {:.2}% | time: {:.0}ms", 
+            epc + 1, 
+            avg_cost, 
+            avg_acc * 100., 
+            avg_test_cost, 
+            avg_test_acc, 
+            epoch_time.elapsed().as_millis()
+        );
         println!("{}", "-".repeat(50));
     }
 
     println!("{}", format!("Completed training in {} seconds", time.elapsed().as_secs()).green());
 
     println!("Generating costs chart");
-    let _ = graphs::costs_candle(&avg_costs, &vec![0.; avg_costs.len()]);
+    let _ = graphs::costs_candle(&avg_train_costs, &avg_test_costs);
 }
 
 fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
