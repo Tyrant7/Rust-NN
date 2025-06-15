@@ -32,12 +32,12 @@ use crate::Tracked;
 
 #[allow(unused)]
 pub fn run() {
-    let train_data_path = "data/t10k-images.idx3-ubyte";
-    let train_labels_path = "data/t10k-labels.idx1-ubyte";
+    let train_data_path = "data/train-images.idx3-ubyte";
+    let train_labels_path = "data/train-labels.idx1-ubyte";
     let (train_data, train_labels) = read_data(train_data_path, train_labels_path);
 
-    let test_data_path = "data/train-images.idx3-ubyte";
-    let test_labels_path = "data/train-labels.idx1-ubyte";
+    let test_data_path = "data/t10k-images.idx3-ubyte";
+    let test_labels_path = "data/t10k-labels.idx1-ubyte";
     let (test_data, test_labels) = read_data(test_data_path, test_labels_path);
 
     let num_classes = 10;
