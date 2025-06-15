@@ -41,17 +41,17 @@ impl<'a> LearnableParameter<'a> {
 }
 
 #[derive(Debug)]
-struct ParameterGroup<T>
+struct ParameterGroup<D>
 where 
-    T: Dimension
+    D: Dimension
 {
-    pub values: ArrayBase<OwnedRepr<f32>, T>,
-    pub gradients: ArrayBase<OwnedRepr<f32>, T>,
+    pub values: Array<f32, D>,
+    pub gradients: Array<f32, D>,
 }
 
-impl<T: Dimension> ParameterGroup<T>
+impl<D: Dimension> ParameterGroup<D>
 {
-    pub fn new(initial_values: ArrayBase<OwnedRepr<f32>, T>) -> Self {
+    pub fn new(initial_values: Array<f32, D>) -> Self {
         let gradients = Array::zeros(initial_values.raw_dim());
         ParameterGroup {
             values: initial_values,
@@ -69,7 +69,7 @@ impl<T: Dimension> ParameterGroup<T>
 
 use std::vec;
 
-use ndarray::{Array, ArrayBase, ArrayViewMutD, Dimension, IntoDimension, OwnedRepr};
+use ndarray::{Array, ArrayViewMutD, Dimension, IntoDimension, OwnedRepr};
 
 pub mod chain;
 pub use chain::Chain;
