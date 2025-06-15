@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use serde::{Serialize, Deserialize};
 
 use ndarray::{Array, Array2, ArrayD, Dimension, IntoDimension, IxDyn};
 
@@ -7,8 +8,8 @@ use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 #[derive(Debug)]
 pub struct Chain<L1, L2>
 where 
-    L1: CompositeLayer<Output: Dimension>,
-    L2: CompositeLayer<Input: Dimension>,
+    L1: CompositeLayer,
+    L2: CompositeLayer,
 {
     inner: L1,
     next: L2,
@@ -16,8 +17,8 @@ where
 
 impl<L1, L2> Chain<L1, L2> 
 where 
-    L1: CompositeLayer<Output: Dimension>,
-    L2: CompositeLayer<Input: Dimension>,
+    L1: CompositeLayer,
+    L2: CompositeLayer,
 {
     pub fn new(inner: L1, next: L2) -> Self {
         Self { 
@@ -33,8 +34,8 @@ where
 
 impl<L1, L2> CompositeLayer for Chain<L1, L2>
 where 
-    L1: CompositeLayer<Output: Dimension>,
-    L2: CompositeLayer<Input: Dimension>,
+    L1: CompositeLayer,
+    L2: CompositeLayer,
 {
     type Input = L1::Input;
     type Output = L2::Output;

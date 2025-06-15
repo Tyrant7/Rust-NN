@@ -40,6 +40,8 @@ mod graphs;
 mod examples;
 use examples::mnist;
 
+use crate::helpers::save_load;
+
 mod profiling;
 
 fn main() {
@@ -47,7 +49,7 @@ fn main() {
 
     mnist::run();
 
-    // // Example usage of the library solving the XOR problem
+    // Example usage of the library solving the XOR problem
     // let mut network = chain!(
     //     Linear::new_from_rand(2, 16), 
     //     ReLU, 
@@ -56,6 +58,8 @@ fn main() {
     //     Sigmoid,
     //     Flatten::new(0),
     // );
+
+    // save_load::save_model_state(network);
 
     // let data = [
     //     ([0., 0.], 0.),
