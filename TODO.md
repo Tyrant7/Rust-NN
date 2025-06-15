@@ -2,7 +2,6 @@
 
 ## Currently working on:
 
--   Separate train and test loops for MNIST
 -   Ability to save and load model states
 
 ## Next up:
