@@ -1,11 +1,12 @@
 use rand::Rng;
 use ndarray::{Array2, ArrayView2, Axis, Ix2};
+use serde::{Deserialize, Serialize};
 
 use crate::helpers::initialize_weights::kaiming_normal;
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Linear {
     weights: ParameterGroup<Ix2>,
     bias: ParameterGroup<Ix2>,

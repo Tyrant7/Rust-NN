@@ -1,13 +1,15 @@
 use std::fmt::Debug;
 
-use ndarray::{Array, ArrayD};
+use ndarray::{Array, ArrayD, Dimension};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Tracked<L>
 where 
-    L: RawLayer
+    L: RawLayer,
+    L::Input: Serialize + DeserializeOwned
 {
     inner: L,
     forward_input: Option<Array<f32, L::Input>>,
@@ -16,7 +18,7 @@ where
 impl<L> Tracked<L>
 where 
     L: RawLayer,
-    L::Input: Clone,
+    L::Input: Clone + Serialize + DeserializeOwned,
 {
     pub fn new(layer: L) -> Self {
         Self {
@@ -29,7 +31,7 @@ where
 impl<L> CompositeLayer for Tracked<L> 
 where 
     L: RawLayer,
-    L::Input: Clone + Debug,
+    L::Input: Clone + Debug + Serialize + DeserializeOwned,
 {
     type Input = L::Input;
     type Output = L::Output;

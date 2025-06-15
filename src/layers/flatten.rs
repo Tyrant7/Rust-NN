@@ -1,9 +1,10 @@
 use rand::Rng;
 use ndarray::{ArrayD, Axis, Dimension, IxDyn};
+use serde::{Deserialize, Serialize};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Flatten {
     axis: usize,
 }

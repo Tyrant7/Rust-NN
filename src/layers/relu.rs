@@ -1,8 +1,9 @@
 use ndarray::{ArrayD, IxDyn};
+use serde::{Deserialize, Serialize};
 
 use super::RawLayer;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReLU;
 
 impl RawLayer for ReLU {

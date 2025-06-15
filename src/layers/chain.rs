@@ -5,7 +5,7 @@ use ndarray::{Array, Array2, ArrayD, Dimension, IntoDimension, IxDyn};
 
 use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Chain<L1, L2>
 where 
     L1: CompositeLayer,

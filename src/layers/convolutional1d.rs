@@ -3,12 +3,13 @@ use std::sync::Mutex;
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d}, helpers::initialize_weights::kaiming_normal};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Convolutional1D {
     kernels: ParameterGroup<Ix3>,
     bias: Option<ParameterGroup<Ix1>>,

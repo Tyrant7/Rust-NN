@@ -1,9 +1,11 @@
 use ndarray::{ArrayD, IxDyn};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
+use serde::{Deserialize, Serialize};
 
 use super::RawLayer;
 
-#[derive(Debug)]
+// TODO: Serialization for this
+#[derive(Debug, /* Serialize, Deserialize */)]
 pub struct Dropout {
     rate: f32,
     rng: SmallRng,

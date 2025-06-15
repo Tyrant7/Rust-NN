@@ -1,7 +1,6 @@
 // Raw layers are layers that actually deal with data
 // All activation functions, fully connected layers, or convolutions, etc. are raw layers
-pub trait RawLayer: std::fmt::Debug
-{
+pub trait RawLayer: std::fmt::Debug {
     type Input: Dimension;
     type Output: Dimension;
 
@@ -40,7 +39,7 @@ impl<'a> LearnableParameter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ParameterGroup<D>
 where 
     D: Dimension
@@ -75,6 +74,7 @@ pub mod chain;
 pub use chain::Chain;
 
 pub mod tracked;
+use serde::{Deserialize, Serialize};
 pub use tracked::Tracked;
 
 pub mod linear;
