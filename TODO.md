@@ -2,8 +2,6 @@
 
 ## Currently working on:
 
--   Don't serialize pass related stuff, just metadata, weights, and grads
-
 ## Next up:
 
 -   More safety assertions throughout codebase, especially within layers

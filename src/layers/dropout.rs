@@ -7,6 +7,7 @@ use super::RawLayer;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Dropout {
     rate: f32,
+    #[serde(skip)]
     forward_mask: Option<ArrayD<f32>>,
 }
 

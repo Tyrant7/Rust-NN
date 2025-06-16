@@ -12,6 +12,7 @@ where
     L::Input: Serialize + DeserializeOwned
 {
     inner: L,
+    #[serde(skip)]
     forward_input: Option<Array<f32, L::Input>>,
 }
 
