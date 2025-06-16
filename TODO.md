@@ -2,6 +2,9 @@
 
 ## Currently working on:
 
+-   Dataloaders
+    -   Allow for shuffling, incomplete batches, and automatic batching
+
 ## Next up:
 
 -   More safety assertions throughout codebase, especially within layers

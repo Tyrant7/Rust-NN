@@ -57,8 +57,6 @@ mod tests {
         std::fs::remove_file(save_path)
             .expect("Unable to remove temporary model file");
         
-        println!("{original_state}");
-
         assert_eq!(original_state, loaded_state);
     }
 }
