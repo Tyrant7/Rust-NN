@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn save_load() {
-        let mut network = chain!(
+        let mut model = chain!(
             Linear::new_from_rand(2, 16), 
             ReLU, 
             Linear::new_from_rand(16, 1),
@@ -41,21 +41,24 @@ mod tests {
             Sigmoid,
             Flatten::new(0),
         );
-        let before = format!("{:#?}", network);
+        let original_state = serde_json::to_string_pretty(&model).unwrap();
+
         let save_path = Alphanumeric.sample_string(&mut rand::rng(), 20);
         let save_path = save_path.as_str();
 
-        println!("save path: {}", save_path);
-
-        save_model_state(&network, save_path)
+        save_model_state(&model, save_path)
             .expect("Unable to save model state");
-        network = load_model_state(save_path)
+        model = load_model_state(save_path)
             .expect("Unable to load model state");
+
+        let loaded_state = serde_json::to_string_pretty(&model).unwrap();
 
         // Delete the temporary file
         std::fs::remove_file(save_path)
             .expect("Unable to remove temporary model file");
         
-        assert_eq!(format!("{:#?}", network), before);
+        println!("{original_state}");
+
+        assert_eq!(original_state, loaded_state);
     }
 }
