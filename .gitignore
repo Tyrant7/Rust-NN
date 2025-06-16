@@ -8,3 +8,7 @@ data/*
 # Profiling stuff
 
 profile.json.gz
+
+# State stuff
+
+*.state

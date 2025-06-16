@@ -12,7 +12,6 @@ where
     L2: CompositeLayer,
 {
     inner: L1,
-    // #[serde(flatten)]
     next: L2,
 }
 
