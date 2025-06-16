@@ -2,7 +2,6 @@
 
 ## Currently working on:
 
--   Fix dropout layer serialization
 -   Don't serialize pass related stuff, just metadata, weights, and grads
 
 ## Next up:

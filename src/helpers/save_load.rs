@@ -36,6 +36,7 @@ mod tests {
             Linear::new_from_rand(2, 16), 
             ReLU, 
             Linear::new_from_rand(16, 1),
+            Dropout::new(0.5),
             Sigmoid,
             Flatten::new(0),
         );

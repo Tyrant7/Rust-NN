@@ -4,19 +4,16 @@ use serde::{Deserialize, Serialize};
 
 use super::RawLayer;
 
-// TODO: Serialization for this
-#[derive(Debug, /* Serialize, Deserialize */)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Dropout {
     rate: f32,
-    rng: SmallRng,
     forward_mask: Option<ArrayD<f32>>,
 }
 
 impl Dropout {
-    pub fn new(rate: f32, seed: u64) -> Dropout {
+    pub fn new(rate: f32) -> Dropout {
         Dropout {
             rate,
-            rng: SmallRng::seed_from_u64(seed),
             forward_mask: None,
         }
     }
@@ -33,7 +30,7 @@ impl RawLayer for Dropout {
         }
         
         let mask = input.map(|_| {
-            if self.rng.random::<f32>() > self.rate {
+            if rand::random::<f32>() > self.rate {
                 1.
             } else {
                 0.
