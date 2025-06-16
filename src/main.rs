@@ -50,16 +50,14 @@ fn main() {
     // mnist::run();
 
     // Example usage of the library solving the XOR problem
-    let mut network = chain!(
-        Linear::new_from_rand(2, 16), 
-        ReLU, 
-        // Dropout::new(0.5, 5), 
-        Linear::new_from_rand(16, 1),
-        Sigmoid,
-        Flatten::new(0),
-    );
-
-    save_load::save_model_state(network, "model.state");
+    // let mut network = chain!(
+    //     Linear::new_from_rand(2, 16), 
+    //     ReLU, 
+    //     // Dropout::new(0.5, 5), 
+    //     Linear::new_from_rand(16, 1),
+    //     Sigmoid,
+    //     Flatten::new(0),
+    // );
 
     // let data = [
     //     ([0., 0.], 0.),

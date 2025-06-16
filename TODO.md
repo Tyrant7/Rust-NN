@@ -2,7 +2,8 @@
 
 ## Currently working on:
 
--   Ability to save and load model states
+-   Fix dropout layer serialization
+-   Don't serialize pass related stuff, just metadata, weights, and grads
 
 ## Next up:
 
