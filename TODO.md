@@ -2,6 +2,7 @@
 
 ## Currently working on:
 
+-   Finish save/load stuff
 -   Dataloaders
     -   Allow for shuffling, incomplete batches, and automatic batching
 

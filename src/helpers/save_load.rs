@@ -59,4 +59,7 @@ mod tests {
         
         assert_eq!(original_state, loaded_state);
     }
+
+    // TODO: Also include conv layers in above test
+    // TODO: Test pretrained model weights too
 }
