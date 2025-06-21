@@ -1,13 +1,15 @@
 use ndarray::{s, Array3, Axis, Ix3};
+use serde::{Deserialize, Serialize};
 
 use crate::{conv_helpers::{crop_3d, pad_3d}, layers::{ParameterGroup, RawLayer}};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MaxPool1D {
     kernel_width: usize,
     stride: usize,
     padding: usize,
 
+    #[serde(skip)]
     max_indices: Option<Array3<usize>>
 }
 
