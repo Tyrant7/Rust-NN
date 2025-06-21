@@ -30,7 +30,9 @@ mod tests {
     use crate::*;
     use crate::layers::{Convolutional2D, MaxPool2D};
     use crate::save_load::{save_model_state, load_model_state};
+    use ndarray::Array;
     use rand::distr::{Alphanumeric, SampleString};
+    use rand::random;
 
     #[test]
     fn save_load() {
@@ -75,5 +77,47 @@ mod tests {
         assert_eq!(original_state, loaded_state);
     }
 
-    // TODO: Test pretrained model weights too
+    #[test]
+    fn pretrained() {
+        let mut model = chain!(
+            // batch, 1, 28, 28
+            Convolutional2D::new_from_rand(1, 32, (3, 3), true, (1, 1), (1, 1)),
+            ReLU,
+            // batch, 5, 28, 28
+            MaxPool2D::new((2, 2)),
+            // batch, 32, 14, 14
+            Convolutional2D::new_from_rand(32, 64, (3, 3), true, (1, 1), (1, 1)),
+            ReLU,
+            // batch, 64, 14, 14
+            MaxPool2D::new((2, 2)),
+            // batch, 64, 7, 7
+            Flatten::new(2),
+            // batch, 64, 7*7=49
+            Flatten::new(1),
+            // batch, 64*7*7=3136
+            Linear::new_from_rand(3136, 128),
+            ReLU,
+            // batch, 128
+            Linear::new_from_rand(128, 10),
+            // batch, 10
+        );
+        let data = Array::from_shape_fn((1, 1, 28, 28), |_| random::<f32>());
+        let original_output = model.forward(&data, false);
+
+        let save_path = Alphanumeric.sample_string(&mut rand::rng(), 20);
+        let save_path = save_path.as_str();
+
+        save_model_state(&model, save_path)
+            .expect("Unable to save model state");
+        model = load_model_state(save_path)
+            .expect("Unable to load model state");
+
+        let loaded_output = model.forward(&data, false);
+
+        // Delete the temporary file
+        std::fs::remove_file(save_path)
+            .expect("Unable to remove temporary model file");
+        
+        assert_eq!(original_output, loaded_output);
+    }
 }
