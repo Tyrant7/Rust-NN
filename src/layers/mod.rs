@@ -39,7 +39,7 @@ impl<'a> LearnableParameter<'a> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ParameterGroup<D>
 where 
     D: Dimension

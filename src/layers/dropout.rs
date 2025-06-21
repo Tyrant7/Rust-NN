@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::RawLayer;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dropout {
     rate: f32,
     #[serde(skip)]

@@ -9,7 +9,7 @@ use crate::{conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d}, helpers::initia
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Convolutional1D {
     kernels: ParameterGroup<Ix3>,
     bias: Option<ParameterGroup<Ix1>>,

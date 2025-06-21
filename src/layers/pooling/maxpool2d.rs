@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{conv_helpers::{crop_4d, pad_4d}, layers::{ParameterGroup, RawLayer}};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaxPool2D {
     kernel_size: (usize, usize),
     stride: (usize, usize),

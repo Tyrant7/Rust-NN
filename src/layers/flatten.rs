@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Flatten {
     axis: usize,
 }

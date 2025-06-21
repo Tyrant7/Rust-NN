@@ -6,7 +6,7 @@ use crate::helpers::initialize_weights::kaiming_normal;
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Linear {
     weights: ParameterGroup<Ix2>,
     bias: ParameterGroup<Ix2>,
