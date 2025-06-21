@@ -1,12 +1,17 @@
+use core::panic;
 use std::env;
 use std::fs;
 
 use colored::Colorize;
+use ndarray::Array;
 use ndarray::Array2;
 use ndarray::Array4;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
 use ndarray_stats::QuantileExt;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::chain;
 use crate::graphs;
@@ -116,31 +121,57 @@ pub fn run() {
             // Go from (batch, 28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-            let pred = network.forward(&expanded, true);
-            let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
-            avg_cost += cost;
+            let mini_batch_size: usize = 8;
+            let mut network_pool = (0..mini_batch_size).map(|_| network.clone());
+            let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
+                .zip(label_encoded.axis_chunks_iter(Axis(0), mini_batch_size))
+                .zip(network_pool)
+                .collect::<Vec<_>>()
+                .into_par_iter()
+                .map(|((mini_batch, mini_batch_labels), mut network)| {
+                    let pred = network.forward(&mini_batch.to_owned(), true);
 
-            // Compute accuracy for this batch
-            let mut batch_acc = 0.;
-            for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
-                if preds.argmax().unwrap() == label as usize {
-                    batch_acc += 1.;
+                    let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &mini_batch_labels.to_owned());
+
+                    // Compute accuracy for this batch
+                    let mut batch_acc = 0.;
+                    for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
+                        if preds.argmax().unwrap() == label as usize {
+                            batch_acc += 1.;
+                        }
+                    }
+                    batch_acc /= batch_size as f32;
+
+                    // Back propagation
+                    let back = CrossEntropyWithLogitsLoss::derivative(&pred, &mini_batch_labels.to_owned());
+                    network.backward(&back);
+
+                    (cost, batch_acc, network)
+                })
+                .collect::<Vec<_>>();
+      
+            let (batch_cost, batch_acc, mut networks) = mini_batch_results
+                .iter()
+                .fold((0., 0., vec![]), |(c, a, mut n), r| {
+                    n.push(r.2.clone());
+                    (c + r.0, a + r.1, n)
+                });
+
+            // Accumulate gradients from the entire minibatch into our main network
+            let mut main_params = network.get_learnable_parameters();
+            for net in networks.iter_mut() {
+                for (param, other) in main_params.iter_mut().zip(net.get_learnable_parameters()) {
+                    param.gradients += &other.gradients;
                 }
             }
-            batch_acc /= batch_size as f32;
-            avg_acc += batch_acc;
-
-            println!("Batch {i:>3} | avg loss: {cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
-
-            // Back propagation
-            let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
-            network.backward(&back);
 
             // Gradient application
             optimizer.step(&mut network.get_learnable_parameters());
-
+            
             // Zero gradients before next epoch
             optimizer.zero_gradients(&mut network.get_learnable_parameters());
+
+            println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
         }
 
         avg_cost /= num_batches as f32;
