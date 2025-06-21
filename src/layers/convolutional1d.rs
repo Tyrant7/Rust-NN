@@ -2,7 +2,6 @@ use std::sync::Mutex;
 
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d}, helpers::initialize_weights::kaiming_normal};
@@ -70,7 +69,7 @@ impl RawLayer for Convolutional1D {
         let mut batch_outputs = vec![Array2::<f32>::zeros((out_features, output_width)); batch_size];
 
         batch_outputs
-            .par_iter_mut()
+            .iter_mut()
             .enumerate()
             .for_each(|(b, batch_output)| {
             for out_f in 0..out_features {
@@ -122,9 +121,9 @@ impl RawLayer for Convolutional1D {
         };
         
         batch_signals
-            .par_iter_mut()
-            .zip(kernel_grads.par_iter_mut())
-            .zip(bias_grads.par_iter_mut())
+            .iter_mut()
+            .zip(kernel_grads.iter_mut())
+            .zip(bias_grads.iter_mut())
             .enumerate()
             .for_each(|(b, ((batch_signal, kernel_grad), bias_grad))| {
             for out_f in 0..out_features {
