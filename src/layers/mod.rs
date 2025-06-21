@@ -28,6 +28,7 @@ pub trait CompositeLayer: std::fmt::Debug {
     // TODO: "inspect()" method to print model layers in a prettier way
 }
 
+#[derive(Debug)]
 pub struct LearnableParameter<'a> {
     pub values: ArrayViewMutD<'a, f32>,
     pub gradients: ArrayViewMutD<'a, f32>,

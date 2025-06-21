@@ -73,7 +73,7 @@ impl RawLayer for Convolutional2D {
         let mut batch_outputs = vec![Array3::<f32>::zeros((out_features, output_height, output_width)); batch_size];
         
         batch_outputs
-            .par_iter_mut()
+            .iter_mut()
             .enumerate()
             .for_each(|(b, batch_output)| {
             for out_f in 0..out_features {
@@ -128,9 +128,9 @@ impl RawLayer for Convolutional2D {
             vec![None; batch_size]
         };
         batch_signals
-            .par_iter_mut()
-            .zip(kernel_grads.par_iter_mut())
-            .zip(bias_grads.par_iter_mut())
+            .iter_mut()
+            .zip(kernel_grads.iter_mut())
+            .zip(bias_grads.iter_mut())
             .enumerate()
             .for_each(|(b, ((batch_signal, kernel_grad), bias_grad))| {
             for out_f in 0..out_features {
