@@ -6,6 +6,7 @@ use colored::Colorize;
 use ndarray::Array;
 use ndarray::Array2;
 use ndarray::Array4;
+use ndarray::ArrayD;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
 use ndarray_stats::QuantileExt;
@@ -122,14 +123,19 @@ pub fn run() {
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
             let mini_batch_size: usize = 4;
-            let mini_batches = batch_size / mini_batch_size;
+            let mini_batches = batch_size.div_ceil(mini_batch_size);
             let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
                 .zip(label_encoded.axis_chunks_iter(Axis(0), mini_batch_size))
                 .map(|d| (d, network.clone()))
                 .collect::<Vec<_>>()
                 .into_par_iter()
                 .map(|((mini_batch, mini_batch_labels), mut network)| {
+                    let mini_batch_length = mini_batch.dim().0;
                     let pred = network.forward(&mini_batch.to_owned(), true);
+
+                    println!("pred: \n{:?}", pred);
+                    println!("labl: \n{:?}", mini_batch_labels);
+
                     let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &mini_batch_labels.to_owned());
 
                     // Compute accuracy for this minibatch
@@ -139,31 +145,38 @@ pub fn run() {
                             mini_batch_acc += 1.;
                         }
                     }
-                    mini_batch_acc /= mini_batch_size as f32;
+                    mini_batch_acc /= mini_batch_length as f32;
 
                     // Back propagation
                     let back = CrossEntropyWithLogitsLoss::derivative(&pred, &mini_batch_labels.to_owned());
                     network.backward(&back);
 
-                    (cost, mini_batch_acc, network)
+                    let gradients = network.get_learnable_parameters()
+                        .into_iter()
+                        .map(|param| &param.gradients / mini_batch_length as f32)
+                        .collect::<Vec<_>>();
+                    (cost, mini_batch_acc, gradients)
                 })
-                .collect::<Vec<_>>();
+                .reduce_with(|a, b| {
+                    let grads = a.2.into_iter()
+                        .zip(b.2)
+                        .map(|(p1, p2)| p1 + p2)
+                        .collect();
+                    (a.0 + b.0, a.1 + b.1, grads)
+                })
+                .unwrap();
       
-            let (batch_cost, batch_acc, mut nets) = mini_batch_results
-                .iter()
-                .fold((0., 0., vec![]), |(c, a, mut n), r| {
-                    n.push(r.2.clone());
-                    (c + r.0, a + r.1, n)
-                });
+            let (batch_cost, batch_acc, grads) = mini_batch_results;
             let batch_cost = batch_cost / mini_batches as f32;
             let batch_acc = batch_acc / mini_batches as f32;
 
             // Average gradients from the entire minibatch into our main network
             let mut main_params = network.get_learnable_parameters();
-            for n in nets.iter_mut() {
-                for (param, other) in main_params.iter_mut().zip(n.get_learnable_parameters()) {
-                    param.gradients += &(&other.gradients / mini_batches as f32);
-                }
+            for (param, grad) in main_params.iter_mut().zip(grads) {
+
+                // println!("grad: {:#?}", grad);
+
+                param.gradients += &grad;
             }
 
             println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
