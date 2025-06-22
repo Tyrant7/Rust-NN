@@ -8,34 +8,19 @@ pub enum ThreadMode {
 }
 
 /// Expect examples in the format (data, labels)
-pub struct TrainData<M, D, O, L> 
-where 
-    M: CompositeLayer,
-    D: Dimension,
-    O: Optimizer,
-    L: LossFunction
-{
+pub fn train_model<M, D, O, L>(
     model: M,
-    examples: (Array<D, f32>, Array2<f32>),
     optimizer: O,
     loss_fn: L,
+    examples: (Array<D, f32>, Array2<f32>),
     thread_mode: ThreadMode,
-}
-
-pub fn train_model<M, D, O, L>(train_data: TrainData<M, D, O, L>) 
-where 
+) where 
     M: CompositeLayer,
     D: Dimension,
     O: Optimizer,
     L: LossFunction
 {
-    let TrainData { 
-        model, 
-        examples, 
-        optimizer, 
-        loss_fn, 
-        thread_mode 
-    } = train_data;
+    // TODO: Rewrite below to be correct
 
     for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
         let batch_time = std::time::Instant::now();
