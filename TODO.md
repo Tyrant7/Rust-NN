@@ -2,6 +2,10 @@
 
 ## Currently working on:
 
+-   Finish model training util
+    -   Finish actual functionality
+    -   Write tests to ensure that train util works correctly with mutliple threads
+    -   Make general for both regression and classification problems, as well as other types
 -   Dataloaders
     -   Allow for shuffling, incomplete batches, and automatic batching
 
