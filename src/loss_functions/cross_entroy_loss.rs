@@ -32,7 +32,6 @@ impl LossFunction for CrossEntropyWithLogitsLoss {
         let soft = exp / sum;
 
         // Gradient of cross-entropy with softmax = softmax - label
-        // Averaged over the batch
-        (soft - label) / (pred.dim().0 as f32)
+        soft - label
     }
 }

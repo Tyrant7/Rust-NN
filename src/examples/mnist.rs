@@ -37,7 +37,6 @@ use crate::Tracked;
 
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
-#[allow(unused)]
 pub fn run() {
     let train_data_path = "data/train-images.idx3-ubyte";
     let train_labels_path = "data/train-labels.idx1-ubyte";
@@ -118,7 +117,6 @@ pub fn run() {
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
             let mini_batch_size: usize = 4;
-            let mini_batches = batch_size.div_ceil(mini_batch_size);
             let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
                 .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
                 .map(|d| (d, network.clone()))
@@ -174,6 +172,10 @@ pub fn run() {
             for (param, grad) in main_params.iter_mut().zip(grads) {
                 param.gradients.assign(&grad);
             }
+
+            println!("g: \n{:?}", main_params);
+
+            // panic!();
 
             println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
 
