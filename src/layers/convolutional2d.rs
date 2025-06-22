@@ -4,7 +4,7 @@ use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 use serde::{Deserialize, Serialize};
 
-use crate::{conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helpers::initialize_weights::kaiming_normal};
+use crate::{conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helpers::initialize_weights::{kaiming_normal, SeedMode}};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
@@ -27,7 +27,7 @@ impl Convolutional2D {
         stride: (usize, usize), 
         padding: (usize, usize),
     ) -> Self {
-        let kernels = kaiming_normal((out_features, in_features, kernel_size.0, kernel_size.1), 1);
+        let kernels = kaiming_normal((out_features, in_features, kernel_size.0, kernel_size.1), 1, SeedMode::Random);
         let bias = match use_bias {
             true => Some(Array1::zeros(out_features)),
             false => None,

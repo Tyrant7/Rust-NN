@@ -19,7 +19,7 @@ impl SeedMode {
     }
 }
 
-pub fn kaiming_normal<D: Dimension>(dims: D, use_dim: usize, seed_mode: SeedMode) -> Array<f32, D> {
+pub fn kaiming_normal<D: IntoDimension>(dims: D, use_dim: usize, seed_mode: SeedMode) -> Array<f32, <D as IntoDimension>::Dim> {
     let dims = dims.into_dimension();
     let std_dev = (2. / dims[use_dim] as f64).sqrt();
     let dist = Normal::new(0., std_dev).expect("Unable to create distribution");
