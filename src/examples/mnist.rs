@@ -173,10 +173,6 @@ pub fn run() {
                 param.gradients.assign(&grad);
             }
 
-            println!("g: \n{:?}", main_params);
-
-            // panic!();
-
             println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
 
             // Gradient application
