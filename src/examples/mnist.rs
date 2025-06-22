@@ -116,7 +116,7 @@ pub fn run() {
             // Go from (batch, 28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-            let mini_batch_size: usize = 4;
+            let mini_batch_size: usize = batch_size.div_ceil(std::thread::available_parallelism().unwrap().into());
             let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
                 .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
                 .map(|d| (d, network.clone()))
