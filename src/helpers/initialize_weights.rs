@@ -26,3 +26,16 @@ pub fn kaiming_normal<D: IntoDimension>(dims: D, use_dim: usize, seed_mode: Seed
     let mut rng = seed_mode.rng();
     Array::from_shape_fn(dims, |_| dist.sample(&mut rng) as f32)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kaiming() {
+        let seed = 123;
+        let a = kaiming_normal((3, 3), 1, SeedMode::Seeded(seed));
+        let b = kaiming_normal((3, 3), 1, SeedMode::Seeded(seed));
+        assert_eq!(a, b);
+    }
+}
