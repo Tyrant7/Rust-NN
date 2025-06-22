@@ -114,18 +114,13 @@ pub fn run() {
         for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
             let batch_time = std::time::Instant::now();
 
-            let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
-            for (i, &label) in labels.iter().enumerate() {
-                label_encoded[[i, label as usize]] = 1.;
-            }
-
             // Go from (batch, 28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-            let mini_batch_size: usize = 4;
+            let mini_batch_size: usize = 8;
             let mini_batches = batch_size.div_ceil(mini_batch_size);
             let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
-                .zip(label_encoded.axis_chunks_iter(Axis(0), mini_batch_size))
+                .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
                 .map(|d| (d, network.clone()))
                 .collect::<Vec<_>>()
                 .into_par_iter()
@@ -133,7 +128,12 @@ pub fn run() {
                     let mini_batch_length = mini_batch.dim().0;
                     let pred = network.forward(&mini_batch.to_owned(), true);
 
-                    let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &mini_batch_labels.to_owned());
+                    let mut label_encoded = Array2::<f32>::zeros((mini_batch_length, num_classes));
+                    for (i, &label) in mini_batch_labels.iter().enumerate() {
+                        label_encoded[[i, label as usize]] = 1.;
+                    }
+
+                    let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded);
 
                     // Compute accuracy for this minibatch
                     let mut mini_batch_acc = 0.;
@@ -144,7 +144,7 @@ pub fn run() {
                     }
 
                     // Back propagation
-                    let back = CrossEntropyWithLogitsLoss::derivative(&pred, &mini_batch_labels.to_owned());
+                    let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
                     network.backward(&back);
 
                     let gradients = network.get_learnable_parameters()
@@ -172,10 +172,7 @@ pub fn run() {
             // Average gradients from the entire minibatch into our main network
             let mut main_params = network.get_learnable_parameters();
             for (param, grad) in main_params.iter_mut().zip(grads) {
-
-                // println!("grad: {:#?}", grad);
-
-                param.gradients += &grad;
+                param.gradients.assign(&grad);
             }
 
             println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
