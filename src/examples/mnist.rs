@@ -133,19 +133,15 @@ pub fn run() {
                     let mini_batch_length = mini_batch.dim().0;
                     let pred = network.forward(&mini_batch.to_owned(), true);
 
-                    println!("pred: \n{:?}", pred);
-                    println!("labl: \n{:?}", mini_batch_labels);
-
                     let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &mini_batch_labels.to_owned());
 
                     // Compute accuracy for this minibatch
                     let mut mini_batch_acc = 0.;
-                    for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
+                    for (&label, preds) in mini_batch_labels.iter().zip(pred.axis_iter(Axis(0))) {
                         if preds.argmax().unwrap() == label as usize {
                             mini_batch_acc += 1.;
                         }
                     }
-                    mini_batch_acc /= mini_batch_length as f32;
 
                     // Back propagation
                     let back = CrossEntropyWithLogitsLoss::derivative(&pred, &mini_batch_labels.to_owned());
@@ -153,7 +149,7 @@ pub fn run() {
 
                     let gradients = network.get_learnable_parameters()
                         .into_iter()
-                        .map(|param| &param.gradients / mini_batch_length as f32)
+                        .map(|param| param.gradients.to_owned())
                         .collect::<Vec<_>>();
                     (cost, mini_batch_acc, gradients)
                 })
@@ -161,14 +157,17 @@ pub fn run() {
                     let grads = a.2.into_iter()
                         .zip(b.2)
                         .map(|(p1, p2)| p1 + p2)
-                        .collect();
+                        .collect::<Vec<_>>();
                     (a.0 + b.0, a.1 + b.1, grads)
                 })
                 .unwrap();
       
             let (batch_cost, batch_acc, grads) = mini_batch_results;
-            let batch_cost = batch_cost / mini_batches as f32;
-            let batch_acc = batch_acc / mini_batches as f32;
+            let batch_cost = batch_cost / batch_size as f32;
+            let batch_acc = batch_acc / batch_size as f32;
+            let grads = grads.into_iter()
+                .map(|g| g / batch_size as f32)
+                .collect::<Vec<_>>();
 
             // Average gradients from the entire minibatch into our main network
             let mut main_params = network.get_learnable_parameters();

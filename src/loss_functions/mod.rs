@@ -2,7 +2,7 @@ use ndarray::{Array1, Array2};
 
 pub trait LossFunction {
     /// Data should be given in (batch, width) format.
-    /// Returns the mean loss for each sample in the batch. 
+    /// Returns the total, unaveraged loss for all sample in the batch. 
     fn original(preds: &Array2<f32>, labels: &Array2<f32>) -> f32;
     /// Data should be given in (batch, width) format.
     /// Returns the average gradient over the batch to avoid scaling gradients with larger batch sizes. 
