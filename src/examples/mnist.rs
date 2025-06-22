@@ -117,7 +117,7 @@ pub fn run() {
             // Go from (batch, 28, 28) to (batch, 1, 28, 28)
             let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-            let mini_batch_size: usize = 8;
+            let mini_batch_size: usize = 4;
             let mini_batches = batch_size.div_ceil(mini_batch_size);
             let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
                 .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
