@@ -2,10 +2,6 @@ use ndarray::Array;
 use rand::seq::SliceRandom;
 
 pub struct DataLoader<XType, XDim, Y> 
-where 
-    XType: Clone,
-    XDim: Clone,
-    Y: Clone,
 {
     dataset: Vec<(Array<XType, XDim>, Y)>,
     current_data: Vec<(Array<XType, XDim>, Y)>,
@@ -24,8 +20,9 @@ where
         dataset: Vec<(Array<XType, XDim>, Y)>, 
         batch_size: usize, 
         shuffle: bool, 
-        use_incomplete_batches: bool) -> Self {
-        let mut current_data = dataset.iter().cloned().collect::<Vec<_>>();
+        use_incomplete_batches: bool
+    ) -> Self {
+        let mut current_data = dataset.to_vec();
         if shuffle { 
             current_data.shuffle(&mut rand::rng())
         }
