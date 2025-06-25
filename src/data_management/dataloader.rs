@@ -1,4 +1,4 @@
-use ndarray::Array;
+use ndarray::{stack, Array, Array1, Axis, Data, Dimension};
 use rand::seq::SliceRandom;
 
 pub struct DataLoader<XType, XDim, Y> 
@@ -13,7 +13,7 @@ pub struct DataLoader<XType, XDim, Y>
 impl<XType, XDim, Y> DataLoader<XType, XDim, Y> 
 where 
     XType: Clone,
-    XDim: Clone,
+    XDim: Clone + Dimension,
     Y: Clone,
 {
     pub fn new(
@@ -33,5 +33,33 @@ where
             shuffle, 
             use_incomplete_batches 
         }
+    }
+}
+
+impl<XType, XDim, Y> Iterator for DataLoader<XType, XDim, Y> 
+where 
+    XType: Clone,
+    XDim: Clone + Dimension,
+    Y: Clone, 
+{
+    type Item = (Array<XType, XDim::Larger>, Array1<Y>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let remaining = self.current_data.len();
+        if remaining == 0 || (!self.use_incomplete_batches && remaining < self.batch_size) {
+            return None
+        }
+        
+        let batch = self.current_data
+            .drain(..self.batch_size.min(self.current_data.len()))
+            .collect::<Vec<_>>();
+
+        let batch_data = batch.iter().map(|b| b.0.view()).collect::<Vec<_>>();
+        let batch_labels = batch.iter().map(|b| b.1.clone()).collect();
+
+        let batch_data = stack(Axis(0), &batch_data).expect("Error creating batch data");
+        let batch_labels = Array1::from_shape_vec(batch.len(), batch_labels).expect("Error creating batch labels");
+        
+        Some((batch_data, batch_labels))
     }
 }
