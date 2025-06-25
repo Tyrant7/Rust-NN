@@ -65,8 +65,8 @@ pub fn run() {
     let num_classes = 10;
 
     let batch_size = 200;
-    let train_dataloader = DataLoader::new(train_data_pairs, batch_size, true, true);
-    let test_dataloader = DataLoader::new(test_data_pairs, batch_size, false, true);
+    let mut train_dataloader = DataLoader::new(train_data_pairs, batch_size, true, true);
+    let mut test_dataloader = DataLoader::new(test_data_pairs, batch_size, false, true);
 
     let mut network = chain!(
         // batch, 1, 28, 28
@@ -109,7 +109,7 @@ pub fn run() {
         let mut avg_cost = 0.;
         let mut avg_acc = 0.;
 
-        for (i, (x, labels)) in train_dataloader.enumerate() {
+        for (i, (x, labels)) in (&mut train_dataloader).enumerate() {
             let batch_time = std::time::Instant::now();
 
             let mini_batch_size: usize = batch_size.div_ceil(std::thread::available_parallelism().unwrap().into());
@@ -189,7 +189,7 @@ pub fn run() {
         let mut avg_test_acc = 0.;
 
         // TODO: Parallelize test
-        for (i, (x, labels)) in test_dataloader.enumerate() {
+        for (i, (x, labels)) in (&mut test_dataloader).enumerate() {
             let batch_time = std::time::Instant::now();
 
             let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
