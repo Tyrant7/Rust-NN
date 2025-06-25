@@ -17,6 +17,8 @@ use layers::RawLayer;
 pub mod helpers;
 pub use helpers::conv_helpers;
 
+pub mod data_management;
+
 //
 mod layers;
 use layers::Chain;

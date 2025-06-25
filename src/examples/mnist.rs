@@ -81,7 +81,7 @@ pub fn run() {
     let mut avg_test_costs = Vec::new();
     let mut avg_test_accuracies = Vec::new();
 
-    let batch_size = 50;
+    let batch_size = 200;
     let samples = train_data.shape()[0];
 
     assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
@@ -192,6 +192,7 @@ pub fn run() {
         let mut avg_test_cost = 0.;
         let mut avg_test_acc = 0.;
 
+        // TODO: Parallelize test
         for (i, (x, labels)) in reshaped_test.axis_iter(Axis(0)).zip(reshaped_test_labels.axis_iter(Axis(0))).enumerate() {
             let batch_time = std::time::Instant::now();
 
