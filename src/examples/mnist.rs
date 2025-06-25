@@ -64,7 +64,7 @@ pub fn run() {
 
     let num_classes = 10;
 
-    let batch_size = 200;
+    let batch_size = 50;
     let mut train_dataloader = DataLoader::new(train_data_pairs, batch_size, true, true);
     let mut test_dataloader = DataLoader::new(test_data_pairs, batch_size, false, true);
 
@@ -170,6 +170,8 @@ pub fn run() {
             }
 
             println!("Batch {i:>3} | avg loss: {batch_cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
+            avg_cost += batch_cost;
+            avg_acc += batch_acc;
 
             // Gradient application
             optimizer.step(&mut main_params);
@@ -183,7 +185,9 @@ pub fn run() {
         avg_train_costs.push(avg_cost);
         avg_train_accuracies.push(avg_acc);
 
+        println!("{}", "-".repeat(50));
         println!("Starting test");
+        println!("{}", "-".repeat(50));
 
         let mut avg_test_cost = 0.;
         let mut avg_test_acc = 0.;
@@ -225,7 +229,7 @@ pub fn run() {
             avg_cost, 
             avg_acc * 100., 
             avg_test_cost, 
-            avg_test_acc, 
+            avg_test_acc * 100., 
             epoch_time.elapsed().as_millis()
         );
         println!("{}", "-".repeat(50));
