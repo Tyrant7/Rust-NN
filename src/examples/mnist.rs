@@ -15,6 +15,7 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
 use crate::chain;
+use crate::data_management::dataloader::DataLoader;
 use crate::graphs;
 use crate::helpers::save_load;
 use crate::layers::CompositeLayer;
@@ -37,18 +38,36 @@ use crate::Tracked;
 
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
+/// Example usage of the library solving the MNIST handwritten digit dataset with a test
+/// accuracy of about 96%
 pub fn run() {
-    let train_data_path = "data/train-images.idx3-ubyte";
-    let train_labels_path = "data/train-labels.idx1-ubyte";
-    let (train_data, train_labels) = read_data(train_data_path, train_labels_path);
+    let (train_data, train_labels) = read_data(
+        "data/train-images.idx3-ubyte", 
+        "data/train-labels.idx1-ubyte",
+    );
+    // Go from (N, 28, 28) from 0-255 u8 to (N, 1, 28, 28) from 0-1 f32
+    let train_data = train_data.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);  
 
-    let test_data_path = "data/t10k-images.idx3-ubyte";
-    let test_labels_path = "data/t10k-labels.idx1-ubyte";
-    let (test_data, test_labels) = read_data(test_data_path, test_labels_path);
+    let train_data_pairs = train_data.outer_iter()
+        .zip(train_labels.outer_iter())
+        .collect::<Vec<_>>();
+
+    let (test_data, test_labels) = read_data(
+        "data/t10k-images.idx3-ubyte", 
+        "data/t10k-labels.idx1-ubyte"
+    );
+    let test_data = test_data.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
+
+    let test_data_pairs = test_data.outer_iter()
+        .zip(test_labels.outer_iter())
+        .collect::<Vec<_>>();
 
     let num_classes = 10;
 
-    // Example usage of the library solving the MNIST handwritten digit dataset
+    let batch_size = 200;
+    let train_dataloader = DataLoader::new(train_data_pairs, batch_size, true, true);
+    let test_dataloader = DataLoader::new(test_data_pairs, batch_size, false, true);
+
     let mut network = chain!(
         // batch, 1, 28, 28
         Convolutional2D::new_from_rand(1, 32, (3, 3), true, (1, 1), (1, 1)),
@@ -74,34 +93,14 @@ pub fn run() {
 
     let mut optimizer = SGD::new(&network.get_learnable_parameters(), 0.001, 0.9);
     let epochs = 10;
-
+    
     let mut avg_train_costs = Vec::new();
     let mut avg_train_accuracies = Vec::new();
+    let train_batches = train_dataloader.len();
 
     let mut avg_test_costs = Vec::new();
     let mut avg_test_accuracies = Vec::new();
-
-    let batch_size = 200;
-    let samples = train_data.shape()[0];
-
-    assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
-    let num_batches = samples / batch_size;
-
-    let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
-    let new_label_shape = (num_batches, batch_size);
-
-    let reshaped_train = train_data.to_shape(new_shape).unwrap();
-    let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
-
-    let test_samples = test_data.shape()[0];
-    assert!(test_samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
-    let num_test_batches = test_samples / batch_size;
-
-    let new_test_shape = (num_test_batches, batch_size, test_data.shape()[1], test_data.shape()[2]);
-    let new_test_label_shape = (num_test_batches, batch_size);
-
-    let reshaped_test = test_data.to_shape(new_test_shape).unwrap();
-    let reshaped_test_labels = test_labels.to_shape(new_test_label_shape).unwrap();
+    let test_batches = test_dataloader.len();
 
     let time = std::time::Instant::now();
 
@@ -110,14 +109,11 @@ pub fn run() {
         let mut avg_cost = 0.;
         let mut avg_acc = 0.;
 
-        for (i, (x, labels)) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).enumerate() {
+        for (i, (x, labels)) in train_dataloader.enumerate() {
             let batch_time = std::time::Instant::now();
 
-            // Go from (batch, 28, 28) to (batch, 1, 28, 28)
-            let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
-
             let mini_batch_size: usize = batch_size.div_ceil(std::thread::available_parallelism().unwrap().into());
-            let mini_batch_results = expanded.axis_chunks_iter(Axis(0), mini_batch_size)
+            let mini_batch_results = x.axis_chunks_iter(Axis(0), mini_batch_size)
                 .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
                 .map(|d| (d, network.clone()))
                 .collect::<Vec<_>>()
@@ -128,7 +124,7 @@ pub fn run() {
 
                     let mut label_encoded = Array2::<f32>::zeros((mini_batch_length, num_classes));
                     for (i, &label) in mini_batch_labels.iter().enumerate() {
-                        label_encoded[[i, label as usize]] = 1.;
+                        label_encoded[[i, *label.into_scalar() as usize]] = 1.;
                     }
 
                     let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded);
@@ -136,7 +132,7 @@ pub fn run() {
                     // Compute accuracy for this minibatch
                     let mut mini_batch_acc = 0.;
                     for (&label, preds) in mini_batch_labels.iter().zip(pred.axis_iter(Axis(0))) {
-                        if preds.argmax().unwrap() == label as usize {
+                        if preds.argmax().unwrap() == *label.into_scalar() as usize {
                             mini_batch_acc += 1.;
                         }
                     }
@@ -182,8 +178,8 @@ pub fn run() {
             optimizer.zero_gradients(&mut main_params);
         }
 
-        avg_cost /= num_batches as f32;
-        avg_acc /= num_batches as f32;
+        avg_cost /= train_batches as f32;
+        avg_acc /= train_batches as f32;
         avg_train_costs.push(avg_cost);
         avg_train_accuracies.push(avg_acc);
 
@@ -193,25 +189,22 @@ pub fn run() {
         let mut avg_test_acc = 0.;
 
         // TODO: Parallelize test
-        for (i, (x, labels)) in reshaped_test.axis_iter(Axis(0)).zip(reshaped_test_labels.axis_iter(Axis(0))).enumerate() {
+        for (i, (x, labels)) in test_dataloader.enumerate() {
             let batch_time = std::time::Instant::now();
 
             let mut label_encoded = Array2::<f32>::zeros((batch_size, num_classes));
             for (i, &label) in labels.iter().enumerate() {
-                label_encoded[[i, label as usize]] = 1.;
+                label_encoded[[i, *label.into_scalar() as usize]] = 1.;
             }
 
-            // Go from (batch, 28, 28) to (batch, 1, 28, 28)
-            let expanded = x.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
-
-            let pred = network.forward(&expanded, false);
+            let pred = network.forward(&x, false);
             let cost = CrossEntropyWithLogitsLoss::original(&pred.clone(), &label_encoded.clone());
             avg_test_cost += cost;
 
             // Compute accuracy for this batch
             let mut batch_acc = 0.;
             for (&label, preds) in labels.iter().zip(pred.axis_iter(Axis(0))) {
-                if preds.argmax().unwrap() == label as usize {
+                if preds.argmax().unwrap() == *label.into_scalar() as usize {
                     batch_acc += 1.;
                 }
             }
@@ -221,8 +214,8 @@ pub fn run() {
             println!("Batch {i:>3} | avg loss: {cost:>7.6} | avg acc: {:>6.2}% | time: {:.0}ms", batch_acc * 100., batch_time.elapsed().as_millis());
         }
 
-        avg_test_cost /= num_batches as f32;
-        avg_test_acc /= num_batches as f32;
+        avg_test_cost /= test_batches as f32;
+        avg_test_acc /= test_batches as f32;
         avg_test_costs.push(avg_test_cost);
         avg_test_accuracies.push(avg_test_acc);
 

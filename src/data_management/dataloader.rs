@@ -1,3 +1,5 @@
+use std::ops::Div;
+
 use ndarray::{stack, Array, Array1, ArrayView, Axis, Data, Dimension};
 use rand::seq::SliceRandom;
 
@@ -67,6 +69,21 @@ where
         let batch_labels = Array1::from_shape_vec(batch.len(), batch_labels).expect("Error creating batch labels");
         
         Some((batch_data, batch_labels))
+    }
+}
+
+impl<'a, XType, XDim, Y> ExactSizeIterator for DataLoader<'a, XType, XDim, Y> 
+where 
+    XType: Clone,
+    XDim: Clone + Dimension,
+    Y: Clone, 
+{
+    fn len(&self) -> usize {
+        if self.drop_last {
+            self.dataset.len().div(self.batch_size)
+        } else {
+            self.dataset.len().div_ceil(self.batch_size)
+        }
     }
 }
 

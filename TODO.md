@@ -3,6 +3,7 @@
 ## Currently working on:
 
 -   Fixing MNIST to use new DataLoader struct
+-   Data augmentation using new DataLoader (basic mirroring along axes and offsets)
 
 ## Next up:
 
