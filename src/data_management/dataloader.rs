@@ -7,7 +7,7 @@ pub struct DataLoader<XType, XDim, Y>
     current_data: Vec<(Array<XType, XDim>, Y)>,
     batch_size: usize,
     shuffle: bool,
-    use_incomplete_batches: bool, 
+    drop_last: bool, 
 }
 
 impl<XType, XDim, Y> DataLoader<XType, XDim, Y> 
@@ -20,18 +20,23 @@ where
         dataset: Vec<(Array<XType, XDim>, Y)>, 
         batch_size: usize, 
         shuffle: bool, 
-        use_incomplete_batches: bool
+        drop_last: bool
     ) -> Self {
-        let mut current_data = dataset.to_vec();
-        if shuffle { 
-            current_data.shuffle(&mut rand::rng())
-        }
-        DataLoader { 
+        let mut loader = DataLoader { 
             dataset, 
-            current_data, 
+            current_data: vec![], 
             batch_size, 
             shuffle, 
-            use_incomplete_batches 
+            drop_last 
+        };
+        loader.setup();
+        loader
+    }
+
+    fn setup(&mut self) {
+        self.current_data = self.dataset.to_vec();
+        if self.shuffle { 
+            self.current_data.shuffle(&mut rand::rng())
         }
     }
 }
@@ -45,8 +50,9 @@ where
     type Item = (Array<XType, XDim::Larger>, Array1<Y>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let remaining = self.current_data.len();
-        if remaining == 0 || (!self.use_incomplete_batches && remaining < self.batch_size) {
+        if self.current_data.is_empty() || (self.drop_last && self.current_data.len() < self.batch_size) {
+            // Reload the dataset for epoch
+            self.setup();
             return None
         }
         
@@ -63,3 +69,9 @@ where
         Some((batch_data, batch_labels))
     }
 }
+
+// TODO: Tests
+// full batch
+// incomplete batch dropping
+// incomplete batch usage
+// when dataset is smaller than one batch -> both drop and without
