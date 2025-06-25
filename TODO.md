@@ -2,8 +2,7 @@
 
 ## Currently working on:
 
--   Dataloaders
-    -   Allow for shuffling, incomplete batches, and automatic batching
+-   Fixing MNIST to use new DataLoader struct
 
 ## Next up:
 
