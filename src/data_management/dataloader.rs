@@ -70,8 +70,43 @@ where
     }
 }
 
-// TODO: Tests
-// full batch
-// incomplete batch dropping
-// incomplete batch usage
-// when dataset is smaller than one batch -> both drop and without
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn full_batch_shuffle() {
+        let dataset = (0..4).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let dataloader = DataLoader::new(dataset, 2, true, true);
+        for (x, label) in dataloader {
+            assert!(x.dim() == (2, 3));
+            assert!(label.dim() == 2);
+        }
+    }
+
+    #[test]
+    fn incomplete_batch_drop() {
+        let dataset = (0..5).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let dataloader = DataLoader::new(dataset, 2, false, true);
+        for (x, label) in dataloader {
+            assert!(x.dim() == (2, 3));
+            assert!(label.dim() == 2);
+        }
+    }
+    
+    #[test]
+    fn incomplete_batch_use() {
+        let dataset = (0..5).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let dataloader = DataLoader::new(dataset, 2, false, false);
+        let (last_x, last_label) = dataloader.last().unwrap();
+        assert!(last_x.dim() == (1, 3));
+        assert!(last_label.dim() == 1);
+    }
+
+    #[test]
+    fn smaller_than_batch() {
+        let dataset = (0..2).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let mut dataloader = DataLoader::new(dataset, 3, false, true);
+        assert!(dataloader.next().is_none());
+    }
+}

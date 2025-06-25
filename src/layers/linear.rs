@@ -76,8 +76,6 @@ impl RawLayer for Linear {
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array1;
-
     use super::*;
 
     #[test]
