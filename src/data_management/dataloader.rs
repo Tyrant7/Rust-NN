@@ -1,23 +1,23 @@
-use ndarray::{stack, Array, Array1, Axis, Data, Dimension};
+use ndarray::{stack, Array, Array1, ArrayView, Axis, Data, Dimension};
 use rand::seq::SliceRandom;
 
-pub struct DataLoader<XType, XDim, Y> 
+pub struct DataLoader<'a, XType, XDim, Y> 
 {
-    dataset: Vec<(Array<XType, XDim>, Y)>,
-    current_data: Vec<(Array<XType, XDim>, Y)>,
+    dataset: Vec<(ArrayView<'a, XType, XDim>, Y)>,
+    current_data: Vec<(ArrayView<'a, XType, XDim>, Y)>,
     batch_size: usize,
     shuffle: bool,
     drop_last: bool, 
 }
 
-impl<XType, XDim, Y> DataLoader<XType, XDim, Y> 
+impl<'a, XType, XDim, Y> DataLoader<'a, XType, XDim, Y> 
 where 
     XType: Clone,
     XDim: Clone + Dimension,
     Y: Clone,
 {
     pub fn new(
-        dataset: Vec<(Array<XType, XDim>, Y)>, 
+        dataset: Vec<(ArrayView<'a, XType, XDim>, Y)>, 
         batch_size: usize, 
         shuffle: bool, 
         drop_last: bool
@@ -41,7 +41,7 @@ where
     }
 }
 
-impl<XType, XDim, Y> Iterator for DataLoader<XType, XDim, Y> 
+impl<'a, XType, XDim, Y> Iterator for DataLoader<'a, XType, XDim, Y> 
 where 
     XType: Clone,
     XDim: Clone + Dimension,
@@ -76,7 +76,8 @@ mod tests {
 
     #[test]
     fn full_batch_shuffle() {
-        let dataset = (0..4).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let data = Array1::<f32>::zeros(3);
+        let dataset = (0..4).map(|i| (data.view(), i)).collect();
         let dataloader = DataLoader::new(dataset, 2, true, true);
         for (x, label) in dataloader {
             assert!(x.dim() == (2, 3));
@@ -86,7 +87,8 @@ mod tests {
 
     #[test]
     fn incomplete_batch_drop() {
-        let dataset = (0..5).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let data = Array1::<f32>::zeros(3);
+        let dataset = (0..5).map(|i| (data.view(), i)).collect();
         let dataloader = DataLoader::new(dataset, 2, false, true);
         for (x, label) in dataloader {
             assert!(x.dim() == (2, 3));
@@ -96,7 +98,8 @@ mod tests {
     
     #[test]
     fn incomplete_batch_use() {
-        let dataset = (0..5).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let data = Array1::<f32>::zeros(3);
+        let dataset = (0..5).map(|i| (data.view(), i)).collect();
         let dataloader = DataLoader::new(dataset, 2, false, false);
         let (last_x, last_label) = dataloader.last().unwrap();
         assert!(last_x.dim() == (1, 3));
@@ -105,7 +108,8 @@ mod tests {
 
     #[test]
     fn smaller_than_batch() {
-        let dataset = (0..2).map(|i| (Array1::<f32>::zeros(3), i)).collect();
+        let data = Array1::<f32>::zeros(3);
+        let dataset = (0..2).map(|i| (data.view(), i)).collect();
         let mut dataloader = DataLoader::new(dataset, 3, false, true);
         assert!(dataloader.next().is_none());
     }
