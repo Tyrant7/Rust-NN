@@ -96,11 +96,11 @@ pub fn run() {
     
     let mut avg_train_costs = Vec::new();
     let mut avg_train_accuracies = Vec::new();
-    let train_batches = train_dataloader.iter().len();
+    let train_batches = train_dataloader.len();
 
     let mut avg_test_costs = Vec::new();
     let mut avg_test_accuracies = Vec::new();
-    let test_batches = test_dataloader.iter().len();
+    let test_batches = test_dataloader.len();
 
     let time = std::time::Instant::now();
 

@@ -11,6 +11,7 @@ pub struct DataLoader<'a, XType, XDim, Y>
     drop_last: bool, 
 }
 
+#[must_use]
 pub struct DataIter<'a, XType, XDim, Y>
 {
     data: Vec<(ArrayView<'a, XType, XDim>, Y)>,
@@ -51,6 +52,18 @@ where
             drop_last: self.drop_last,
         }
     }
+
+    pub fn len(&self) -> usize {
+        if self.drop_last {
+            self.dataset.len().div(self.batch_size)
+        } else {
+            self.dataset.len().div_ceil(self.batch_size)
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.dataset.len() == 0
+    }
 }
 
 impl<'a, XType, XDim, Y> Iterator for DataIter<'a, XType, XDim, Y> 
@@ -78,21 +91,6 @@ where
         let batch_labels = Array1::from_shape_vec(batch.len(), batch_labels).expect("Error creating batch labels");
         
         Some((batch_data, batch_labels))
-    }
-}
-
-impl<'a, XType, XDim, Y> ExactSizeIterator for DataIter<'a, XType, XDim, Y> 
-where 
-    XType: Clone,
-    XDim: Clone + Dimension,
-    Y: Clone, 
-{
-    fn len(&self) -> usize {
-        if self.drop_last {
-            self.data.len().div(self.batch_size)
-        } else {
-            self.data.len().div_ceil(self.batch_size)
-        }
     }
 }
 
