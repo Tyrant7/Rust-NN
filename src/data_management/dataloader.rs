@@ -5,10 +5,17 @@ use rand::seq::SliceRandom;
 
 pub struct DataLoader<'a, XType, XDim, Y> 
 {
-    dataset: Vec<(ArrayView<'a, XType, XDim>, Y)>,
-    current_data: Vec<(ArrayView<'a, XType, XDim>, Y)>,
+    dataset: &'a [(ArrayView<'a, XType, XDim>, Y)],
     batch_size: usize,
     shuffle: bool,
+    drop_last: bool, 
+}
+
+pub struct DataIter<'a, XType, XDim, Y>
+{
+    data: Vec<(ArrayView<'a, XType, XDim>, Y)>,
+    index: usize,
+    batch_size: usize,
     drop_last: bool, 
 }
 
@@ -19,31 +26,34 @@ where
     Y: Clone,
 {
     pub fn new(
-        dataset: Vec<(ArrayView<'a, XType, XDim>, Y)>, 
+        dataset: &'a [(ArrayView<'a, XType, XDim>, Y)], 
         batch_size: usize, 
         shuffle: bool, 
         drop_last: bool
     ) -> Self {
-        let mut loader = DataLoader { 
+        DataLoader { 
             dataset, 
-            current_data: vec![], 
             batch_size, 
             shuffle, 
             drop_last 
-        };
-        loader.setup();
-        loader
+        }
     }
 
-    fn setup(&mut self) {
-        self.current_data = self.dataset.to_vec();
-        if self.shuffle { 
-            self.current_data.shuffle(&mut rand::rng())
+    pub fn iter(&self) -> DataIter<'a, XType, XDim, Y> {
+        let mut data = self.dataset.to_vec();
+        if self.shuffle {
+            data.shuffle(&mut rand::rng());
+        }
+        DataIter {
+            data, 
+            index: 0,
+            batch_size: self.batch_size,
+            drop_last: self.drop_last,
         }
     }
 }
 
-impl<'a, XType, XDim, Y> Iterator for DataLoader<'a, XType, XDim, Y> 
+impl<'a, XType, XDim, Y> Iterator for DataIter<'a, XType, XDim, Y> 
 where 
     XType: Clone,
     XDim: Clone + Dimension,
@@ -52,15 +62,14 @@ where
     type Item = (Array<XType, XDim::Larger>, Array1<Y>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_data.is_empty() || (self.drop_last && self.current_data.len() < self.batch_size) {
-            // Reload the dataset for epoch
-            self.setup();
-            return None
+        let remaining = self.data.len().saturating_sub(self.index);
+        if remaining == 0 || (self.drop_last && remaining < self.batch_size) {
+            return None;
         }
         
-        let batch = self.current_data
-            .drain(..self.batch_size.min(self.current_data.len()))
-            .collect::<Vec<_>>();
+        let end = (self.index + self.batch_size).min(self.data.len());
+        let batch = &self.data[self.index..end];
+        self.index = end;
 
         let batch_data = batch.iter().map(|b| b.0.view()).collect::<Vec<_>>();
         let batch_labels = batch.iter().map(|b| b.1.clone()).collect();
@@ -72,7 +81,7 @@ where
     }
 }
 
-impl<'a, XType, XDim, Y> ExactSizeIterator for DataLoader<'a, XType, XDim, Y> 
+impl<'a, XType, XDim, Y> ExactSizeIterator for DataIter<'a, XType, XDim, Y> 
 where 
     XType: Clone,
     XDim: Clone + Dimension,
@@ -80,9 +89,9 @@ where
 {
     fn len(&self) -> usize {
         if self.drop_last {
-            self.dataset.len().div(self.batch_size)
+            self.data.len().div(self.batch_size)
         } else {
-            self.dataset.len().div_ceil(self.batch_size)
+            self.data.len().div_ceil(self.batch_size)
         }
     }
 }
@@ -94,9 +103,9 @@ mod tests {
     #[test]
     fn full_batch_shuffle() {
         let data = Array1::<f32>::zeros(3);
-        let dataset = (0..4).map(|i| (data.view(), i)).collect();
-        let dataloader = DataLoader::new(dataset, 2, true, true);
-        for (x, label) in dataloader {
+        let dataset = (0..4).map(|i| (data.view(), i)).collect::<Vec<_>>();
+        let dataloader = DataLoader::new(dataset.as_slice(), 2, true, true);
+        for (x, label) in dataloader.iter() {
             assert!(x.dim() == (2, 3));
             assert!(label.dim() == 2);
         }
@@ -105,9 +114,10 @@ mod tests {
     #[test]
     fn incomplete_batch_drop() {
         let data = Array1::<f32>::zeros(3);
-        let dataset = (0..5).map(|i| (data.view(), i)).collect();
-        let dataloader = DataLoader::new(dataset, 2, false, true);
-        for (x, label) in dataloader {
+        let dataset = &(0..5).map(|i| (data.view(), i)).collect::<Vec<_>>();
+        let dataloader = DataLoader::new(dataset.as_slice(), 2, false, true);
+        assert!(dataloader.iter().len() == 2);
+        for (x, label) in dataloader.iter() {
             assert!(x.dim() == (2, 3));
             assert!(label.dim() == 2);
         }
@@ -116,9 +126,10 @@ mod tests {
     #[test]
     fn incomplete_batch_use() {
         let data = Array1::<f32>::zeros(3);
-        let dataset = (0..5).map(|i| (data.view(), i)).collect();
-        let dataloader = DataLoader::new(dataset, 2, false, false);
-        let (last_x, last_label) = dataloader.last().unwrap();
+        let dataset = &(0..5).map(|i| (data.view(), i)).collect::<Vec<_>>();
+        let dataloader = DataLoader::new(dataset.as_slice(), 2, false, false);
+        let (last_x, last_label) = dataloader.iter().last().unwrap();     
+        assert!(dataloader.iter().len() == 3);
         assert!(last_x.dim() == (1, 3));
         assert!(last_label.dim() == 1);
     }
@@ -126,8 +137,8 @@ mod tests {
     #[test]
     fn smaller_than_batch() {
         let data = Array1::<f32>::zeros(3);
-        let dataset = (0..2).map(|i| (data.view(), i)).collect();
-        let mut dataloader = DataLoader::new(dataset, 3, false, true);
-        assert!(dataloader.next().is_none());
+        let dataset = &(0..2).map(|i| (data.view(), i)).collect::<Vec<_>>();
+        let dataloader = DataLoader::new(dataset.as_slice(), 3, false, true);
+        assert!(dataloader.iter().next().is_none());
     }
 }
