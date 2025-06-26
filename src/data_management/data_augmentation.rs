@@ -1,32 +1,49 @@
-use ndarray::{Array, Array1, Data, Dimension};
+use ndarray::{Array, Array1, Axis, Data, Dimension, RawDataClone};
 
-// TODO: trash all of this. Bad idea
-
-pub struct AugmentationBuilder<A> {
-    stack: Vec<A>,
+pub enum AugmentationAction {
+    Flip(f32, Axis),
+    Noise(f32),
+    Offset(f32, Axis),
 }
 
-impl<A> Default for AugmentationBuilder<A> {
-    fn default() -> Self {
-        AugmentationBuilder { stack: vec![] }
+pub struct DataAugmentation {
+    actions: Vec<AugmentationAction>,
+}
+
+impl AugmentationAction {
+    pub fn apply<A, D>(&self, data: Array<A, D>) -> Array<A, D> 
+    where 
+        A: Clone,
+        D: Dimension,
+    {
+        match self {
+            Self::Flip(temperature, axis) => {
+                data
+            },
+            Self::Noise(temperature) => {
+                data
+            },
+            Self::Offset(temperature, axis) => {
+                data
+            },
+        }
     }
 }
 
-impl<A> AugmentationBuilder<A> 
-where 
-    A: Augmentation,
-{
-    /// Alias for `AugmentationBuilder::default()`
-    pub fn new() -> Self {
-        AugmentationBuilder::default()
+impl DataAugmentation {
+    pub fn new(actions: Vec<AugmentationAction>) -> Self {
+        DataAugmentation { actions }
     }
 
-    pub fn push(mut self, augmentation: A) -> Self {
-        self.stack.push(augmentation);
-        self
+    pub fn apply<A, D>(&self, data: Array<A, D>) -> Array<A, D> 
+    where 
+        A: Clone,
+        D: Dimension,
+    {
+        let mut data = data.clone();
+        for action in self.actions.iter() {
+            data = action.apply(data);
+        }
+        data
     }
-}
-
-pub trait Augmentation {
-    fn apply(data: Array1<f32>) -> Array1<f32>;
 }
