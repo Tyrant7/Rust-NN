@@ -114,7 +114,7 @@ mod tests {
         let data = Array1::<f32>::zeros(3);
         let dataset = &(0..5).map(|i| (data.view(), i)).collect::<Vec<_>>();
         let dataloader = DataLoader::new(dataset.as_slice(), 2, false, true);
-        assert!(dataloader.iter().len() == 2);
+        assert!(dataloader.len() == 2);
         for (x, label) in dataloader.iter() {
             assert!(x.dim() == (2, 3));
             assert!(label.dim() == 2);
@@ -127,7 +127,7 @@ mod tests {
         let dataset = &(0..5).map(|i| (data.view(), i)).collect::<Vec<_>>();
         let dataloader = DataLoader::new(dataset.as_slice(), 2, false, false);
         let (last_x, last_label) = dataloader.iter().last().unwrap();     
-        assert!(dataloader.iter().len() == 3);
+        assert!(dataloader.len() == 3);
         assert!(last_x.dim() == (1, 3));
         assert!(last_label.dim() == 1);
     }
