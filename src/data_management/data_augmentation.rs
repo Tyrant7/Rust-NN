@@ -6,7 +6,7 @@ use rand::Rng;
 pub enum AugmentationAction {
     Flip(f32, Axis),
     Noise(f32),
-    Translate(f32, Axis, usize, usize),
+    Translate(f32, Axis, i32, i32),
 }
 
 pub struct DataAugmentation {
@@ -34,14 +34,30 @@ impl AugmentationAction {
             },
             Self::Translate(temperature, axis, min_offset, max_offset) => {
                 if rng.random::<f32>() <= temperature {
-
-                    // TODO: This will require some thinking
-
+                    let offset = rng.random_range(min_offset..=max_offset) as isize;
                     let mut result = Array::from_elem(data.raw_dim(), A::default());
-
-                    let mut dest = result.slice_axis_mut(axis, Slice::new(0, None, 1));
-                    let src = data.slice_axis(axis, Slice::new(0, None, 1));
-                    dest.assign(&src);
+                    let len = data.len_of(axis) as isize;
+                    if offset > 0 {
+                        // Shift right: copy from [0..len+offset] to [-offset..len]
+                        let copy_len = len - offset;
+                        if copy_len > 0 {
+                            let src = data.slice_axis(axis, Slice::new(0, Some(copy_len), 1));
+                            let mut dst = result.slice_axis_mut(axis, Slice::new(offset, Some(len), 1));
+                            dst.assign(&src);
+                        }
+                    } else if offset < 0 {
+                        // Shift left: copy from [offset..len] to [0..len-offset]
+                        let copy_len = len + offset;
+                        if copy_len > 0 {
+                            let src = data.slice_axis(axis, Slice::new(-offset, Some(len), 1));
+                            let mut dst = result.slice_axis_mut(axis, Slice::new(0, Some(copy_len), 1));
+                            dst.assign(&src);
+                        }
+                    } else {
+                        // offset == 0 -> no change
+                        result.assign(&data);
+                    }
+                    data.assign(&result);
                 }
             },
         }
@@ -92,12 +108,38 @@ mod tests {
     }
 
     #[test]
-    fn offset() {
+    fn offset_pos() {
         let augmentation = DataAugmentation::new(vec![
             AugmentationAction::Translate(1., Axis(0), 1, 1),
         ]);
 
-        let data = Array1::from_vec(vec![0., 1., 0.,]);
+        let data = Array1::from_vec(vec![0., 1., 1.,]);
+        let augmented = augmentation.apply(&data);
+
+        let target = Array1::from_vec(vec![0., 0., 1.,]);
+        assert_eq!(augmented, target);
+    }
+    
+    #[test]
+    fn offset_neg() {
+        let augmentation = DataAugmentation::new(vec![
+            AugmentationAction::Translate(1., Axis(0), -2, -2),
+        ]);
+
+        let data = Array1::from_vec(vec![0., 1., 1.,]);
+        let augmented = augmentation.apply(&data);
+
+        let target = Array1::from_vec(vec![1., 0., 0.,]);
+        assert_eq!(augmented, target);
+    }
+
+    #[test]
+    fn offset_zero() {
+        let augmentation = DataAugmentation::new(vec![
+            AugmentationAction::Translate(1., Axis(0), 0, 0),
+        ]);
+
+        let data = Array1::from_vec(vec![0., 0., 1.,]);
         let augmented = augmentation.apply(&data);
 
         let target = Array1::from_vec(vec![0., 0., 1.,]);
