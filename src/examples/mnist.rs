@@ -65,8 +65,8 @@ pub fn run() {
     let num_classes = 10;
 
     let batch_size = 50;
-    let train_dataloader = DataLoader::new(train_data_pairs.as_slice(), batch_size, true, true);
-    let test_dataloader = DataLoader::new(test_data_pairs.as_slice(), batch_size, false, true);
+    let train_dataloader = DataLoader::new(train_data_pairs.as_slice(), None, batch_size, true, true);
+    let test_dataloader = DataLoader::new(test_data_pairs.as_slice(), None, batch_size, false, true);
 
     let mut network = chain!(
         // batch, 1, 28, 28
