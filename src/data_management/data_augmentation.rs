@@ -30,7 +30,7 @@ impl<A> AugmentationAction<A> {
             Self::Translate(temperature, axis, min_offset, max_offset) => {
                 if rng.random::<f32>() <= temperature {
                     let offset = rng.random_range(min_offset..=max_offset) as isize;
-                    let mut result = Array::from_elem(data.raw_dim(), A::default());
+                    let mut result = Array::from_elem(data.dim(), A::default());
                     let len = data.len_of(axis) as isize;
                     if offset > 0 {
                         // Shift right: copy from [0..len+offset] to [-offset..len]

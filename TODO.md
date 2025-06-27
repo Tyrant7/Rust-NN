@@ -2,7 +2,7 @@
 
 ## Currently working on:
 
--   Data augmentation using new DataLoader (basic mirroring along axes and offsets)
+-   Integrate data augmentation with dataloader
 
 ## Next up:
 
