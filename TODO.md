@@ -31,6 +31,8 @@
     -   Additional logging for debug mode
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
+-   Better graphing features
+    -   Line charts, naming the charts, choosing the path, etc.
 
 ## Fixes
 
