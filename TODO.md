@@ -3,12 +3,10 @@
 ## Currently working on:
 
 -   More safety assertions throughout codebase, especially within layers
--   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+-   Some docstrings
 
 ## Next up:
 
--   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
-    an application to a library
 -   Generic IDX file reading solution
 
 ## Layer types:
@@ -31,8 +29,17 @@
     -   Additional logging for debug mode
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
+-   More data augmentation options (other noise types, blurring, etc.)
 -   Better graphing features
     -   Line charts, naming the charts, choosing the path, etc.
+
+## For publishing:
+
+-   "README" on GitHub explaining the library
+-   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
+    an application to a library
+-   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+-   Publish to Crates.io
 
 ## Fixes
 
