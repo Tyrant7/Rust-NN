@@ -426,16 +426,11 @@ mod tests {
         ]).unwrap();
         assert_eq!(error_signal, target_signal);
 
-        // let target_grads = Array4::<f32>::from_shape_vec((1, 2, 2, 2), vec![
-        //     // Kernel for in 1
-        //    -7., -6., 
-        //    -3., -2., 
-
-        //    // Kernel for in 2
-        //    -14.,-12., 
-        //    -6., -4.,
-        // ]).unwrap();
-        // assert_eq!(conv.kernels.gradients, target_grads);
+        let target_grads = Array4::<f32>::from_shape_vec((1, 1, 2, 2), vec![
+           15., 13., 
+           11., 9., 
+        ]).unwrap();
+        assert_eq!(conv.kernels.gradients, target_grads);
     }
 
     #[test]
