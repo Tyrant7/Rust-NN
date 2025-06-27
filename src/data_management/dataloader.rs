@@ -3,12 +3,12 @@ use std::ops::Div;
 use ndarray::{stack, Array, Array1, ArrayView, Axis, Data, Dimension, RemoveAxis};
 use rand::seq::SliceRandom;
 
-use crate::data_management::data_augmentation::AugmentationAction;
+use crate::data_management::data_augmentation::DataAugmentation;
 
 pub struct DataLoader<'a, XType, XDim, Y> 
 {
     dataset: &'a [(ArrayView<'a, XType, XDim>, Y)],
-    augmentations: Option<Vec<AugmentationAction<XType>>>,
+    augmentations: Option<Vec<DataAugmentation<XType>>>,
     batch_size: usize,
     shuffle: bool,
     drop_last: bool, 
@@ -31,7 +31,7 @@ where
 {
     pub fn new(
         dataset: &'a [(ArrayView<'a, XType, XDim>, Y)], 
-        augmentations: Option<Vec<AugmentationAction<XType>>>,
+        augmentations: Option<Vec<DataAugmentation<XType>>>,
         batch_size: usize, 
         shuffle: bool, 
         drop_last: bool, 
@@ -161,7 +161,7 @@ mod tests {
     fn full_batch_with_augment() {
         let data = Array1::<f32>::from_vec(vec![0., 0., 1.,]);
         let dataset = (0..4).map(|i| (data.view(), i)).collect::<Vec<_>>();
-        let augments = vec![AugmentationAction::Flip(1., Axis(0))];
+        let augments = vec![DataAugmentation::Flip(1., Axis(0))];
         let dataloader = DataLoader::new(dataset.as_slice(), Some(augments), 2, false, true);
 
         let target = Array2::<f32>::from_shape_vec((2, 3), vec![

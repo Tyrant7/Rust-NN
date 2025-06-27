@@ -15,6 +15,7 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
 use crate::chain;
+use crate::data_management::data_augmentation::DataAugmentation;
 use crate::data_management::dataloader::DataLoader;
 use crate::graphs;
 use crate::helpers::save_load;
@@ -64,8 +65,16 @@ pub fn run() {
 
     let num_classes = 10;
 
-    let batch_size = 50;
-    let train_dataloader = DataLoader::new(train_data_pairs.as_slice(), None, batch_size, true, true);
+    let batch_size = 64;
+
+    // Augmentations are applied before the "batch" dimension is added, so in our case the samples 
+    // would have a shape of (1, 28, 28)
+    let train_augmentations = Some(vec![
+        DataAugmentation::<f32>::SaltAndPepperNoise(0.05, 1., 0.),
+        DataAugmentation::<f32>::Translate(0.5, Axis(1), -3, 3),
+        DataAugmentation::<f32>::Translate(0.5, Axis(2), -3, 3),
+    ]);
+    let train_dataloader = DataLoader::new(train_data_pairs.as_slice(), train_augmentations, batch_size, true, true);
     let test_dataloader = DataLoader::new(test_data_pairs.as_slice(), None, batch_size, false, true);
 
     let mut network = chain!(

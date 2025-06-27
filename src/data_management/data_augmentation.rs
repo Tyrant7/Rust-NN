@@ -3,7 +3,7 @@ use std::ops::Range;
 use ndarray::{Array, Array1, ArrayView, ArrayViewMut, Axis, Data, Dimension, RawDataClone, RemoveAxis, Slice};
 use rand::{seq::SliceRandom, Rng};
 
-pub enum AugmentationAction<A> {
+pub enum DataAugmentation<A> {
     Flip(f32, Axis),
     Translate(f32, Axis, i32, i32),
     SaltAndPepperNoise(f32, A, A),
@@ -14,7 +14,7 @@ pub enum AugmentationAction<A> {
     */
 }
 
-impl<A> AugmentationAction<A> {
+impl<A> DataAugmentation<A> {
     pub fn apply_in_place<D>(&self, data: &mut Array<A, D>) 
     where 
         A: Default + Clone + Copy,
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn flip() {
-        let augmentation = AugmentationAction::Flip(1., Axis(0));
+        let augmentation = DataAugmentation::Flip(1., Axis(0));
         let mut data = Array1::from_vec(vec![0., 0., 1.,]);
         augmentation.apply_in_place(&mut data);
 
@@ -98,8 +98,8 @@ mod tests {
 
     #[test]
     fn flip_second_axis() {
-        let augmentation_1 = AugmentationAction::Flip(1., Axis(1));
-        let augmentation_2 = AugmentationAction::Flip(1., Axis(0));
+        let augmentation_1 = DataAugmentation::Flip(1., Axis(1));
+        let augmentation_2 = DataAugmentation::Flip(1., Axis(0));
         let mut data = Array2::from_shape_vec((2, 2), vec![
             0., 1.,
             0., 0.,
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn noise() {
-        let augmentation = AugmentationAction::SaltAndPepperNoise(0.5, 2, 0);
+        let augmentation = DataAugmentation::SaltAndPepperNoise(0.5, 2, 0);
         let mut data = Array3::<u32>::from_elem((1, 2, 3), 1);
         augmentation.apply_in_place(&mut data);
 
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn offset_pos() {
-        let augmentation = AugmentationAction::Translate(1., Axis(0), 1, 1);
+        let augmentation = DataAugmentation::Translate(1., Axis(0), 1, 1);
         let mut data = Array1::from_vec(vec![0., 1., 1.,]);
         augmentation.apply_in_place(&mut data);
 
@@ -141,7 +141,7 @@ mod tests {
     
     #[test]
     fn offset_neg() {
-        let augmentation = AugmentationAction::Translate(1., Axis(0), -2, -2);
+        let augmentation = DataAugmentation::Translate(1., Axis(0), -2, -2);
         let mut data = Array1::from_vec(vec![0., 1., 1.,]);
         augmentation.apply_in_place(&mut data);
 
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn offset_zero() {
-        let augmentation = AugmentationAction::Translate(1., Axis(0), 0, 0);
+        let augmentation = DataAugmentation::Translate(1., Axis(0), 0, 0);
         let mut data = Array1::from_vec(vec![0., 0., 1.,]);
         augmentation.apply_in_place(&mut data);
 
