@@ -2,12 +2,11 @@
 
 ## Currently working on:
 
--   Integrate data augmentation with dataloader
+-   More safety assertions throughout codebase, especially within layers
+-   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
 
 ## Next up:
 
--   More safety assertions throughout codebase, especially within layers
--   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   Generic IDX file reading solution
@@ -27,9 +26,10 @@
 
 -   Gradient clipping
 -   Pretty layer printouts
+    -   And more debug features
+    -   More random seeding, too
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
--   Data augmentation features
 
 ## Fixes
 
