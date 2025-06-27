@@ -64,7 +64,6 @@ pub fn run() {
         .collect::<Vec<_>>();
 
     let num_classes = 10;
-
     let batch_size = 64;
 
     // Augmentations are applied before the "batch" dimension is added, so in our case the samples 

@@ -25,9 +25,10 @@
 ## Other features:
 
 -   Gradient clipping
--   Pretty layer printouts
-    -   And more debug features
-    -   More random seeding, too
+-   Add more debug features
+    -   Pretty layer printouts
+    -   Complete random seeding, too
+    -   Additional logging for debug mode
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
 
