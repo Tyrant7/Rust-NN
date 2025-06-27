@@ -37,8 +37,12 @@ impl RawLayer for Dropout {
                 0.
             }
         });
-        self.forward_mask = Some(mask.clone());
-        input * &mask / (1. - self.rate)
+        // Here `1. - self.rate` acts as a scaling factor to ensure that the dropout of certain pathways 
+        // doesn't affect the mangitude of the signal moving through the network
+        // The same principle applies during the backward pass
+        let output = input * &mask / (1. - self.rate);
+        self.forward_mask = Some(mask);
+        output
     }
 
     fn backward(&mut self, delta: &ArrayD<f32>, _forward_input: &ArrayD<f32>) -> ArrayD<f32> {
