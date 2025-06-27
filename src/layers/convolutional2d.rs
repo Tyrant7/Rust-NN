@@ -4,7 +4,7 @@ use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4};
 use serde::{Deserialize, Serialize};
 
-use crate::{conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helpers::initialize_weights::{kaiming_normal, SeedMode}};
+use crate::{helpers::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helpers::initialize_weights::{kaiming_normal, SeedMode}};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 

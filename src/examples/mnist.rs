@@ -19,6 +19,8 @@ use crate::data_management::data_augmentation::DataAugmentation;
 use crate::data_management::dataloader::DataLoader;
 use crate::graphs;
 use crate::helpers::save_load;
+use crate::layers::Chain;
+use crate::layers::Tracked;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
@@ -33,8 +35,6 @@ use crate::loss_functions::LossFunction;
 use crate::loss_functions::MSELoss;
 use crate::optimizers::Optimizer;
 use crate::optimizers::SGD;
-use crate::Chain;
-use crate::Tracked;
 
 
 // Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download

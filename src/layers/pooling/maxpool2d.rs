@@ -1,7 +1,7 @@
 use ndarray::{s, Array4, Axis, Ix4};
 use serde::{Deserialize, Serialize};
 
-use crate::{conv_helpers::{crop_4d, pad_4d}, layers::{ParameterGroup, RawLayer}};
+use crate::{helpers::conv_helpers::{crop_4d, pad_4d}, layers::{ParameterGroup, RawLayer}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaxPool2D {

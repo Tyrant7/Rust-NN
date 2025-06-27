@@ -9,6 +9,8 @@ use ndarray::{s, Array1, Array3};
 
 use crate::chain;
 use crate::graphs;
+use crate::layers::Chain;
+use crate::layers::Tracked;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
@@ -22,8 +24,6 @@ use crate::loss_functions::LossFunction;
 use crate::loss_functions::MSELoss;
 use crate::optimizers::Optimizer;
 use crate::optimizers::SGD;
-use crate::Chain;
-use crate::Tracked;
 
 use super::benchmark;
 
