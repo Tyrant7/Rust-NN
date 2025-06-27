@@ -23,11 +23,15 @@ impl<A> AugmentationAction<A> {
         let mut rng = rand::rng();
         match *self {
             Self::Flip(temperature, axis) => {
+                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+
                 if rng.random::<f32>() <= temperature {
                     data.invert_axis(axis);
                 }
             },
             Self::Translate(temperature, axis, min_offset, max_offset) => {
+                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+
                 if rng.random::<f32>() <= temperature {
                     let offset = rng.random_range(min_offset..=max_offset) as isize;
                     let mut result = Array::from_elem(data.dim(), A::default());
@@ -56,6 +60,8 @@ impl<A> AugmentationAction<A> {
                 }
             },
             Self::SaltAndPepperNoise(temperature, salt, pepper) => {
+                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+
                 // Since iterating over all of the indices is slow, we'll instead 
                 // determine what fraction of the image should have added noise,
                 // then iterate over that many random positions and add noise that way
