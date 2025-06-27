@@ -1,36 +1,31 @@
 use std::ops::Range;
 
-use ndarray::{Array, Array1, ArrayView, Axis, Data, Dimension, RawDataClone, RemoveAxis, Slice};
-use rand::Rng;
+use ndarray::{Array, Array1, ArrayView, ArrayViewMut, Axis, Data, Dimension, RawDataClone, RemoveAxis, Slice};
+use rand::{seq::SliceRandom, Rng};
 
-pub enum AugmentationAction {
+pub enum AugmentationAction<A> {
     Flip(f32, Axis),
-    Noise(f32),
     Translate(f32, Axis, i32, i32),
+    SaltAndPepperNoise(f32, A, A),
+    /*
+    GaussianNoise(f32), // Gaussian distribution
+    SpeckleNoise(f32), // Random multiplicative
+    PoissonNoise(f32), // Poisson distribution
+    */
 }
 
-pub struct DataAugmentation {
-    actions: Vec<AugmentationAction>,
-}
-
-impl AugmentationAction {
-    pub fn apply_in_place<A, D>(&self, data: &mut Array<A, D>) 
+impl<A> AugmentationAction<A> {
+    pub fn apply_in_place<D>(&self, data: &mut Array<A, D>) 
     where 
-        A: Default + Clone,
+        A: Default + Clone + Copy,
         D: Dimension + RemoveAxis,
     {
         let mut rng = rand::rng();
         match *self {
             Self::Flip(temperature, axis) => {
                 if rng.random::<f32>() <= temperature {
-                    data.invert_axis(axis)
+                    data.invert_axis(axis);
                 }
-            },
-            Self::Noise(temperature) => {
-                // Since iterating over all of the indices is slow, we'll instead 
-                // determine what fraction of the image should have added noise,
-                // then iterate over that many random indices and add noise that way
-                todo!()
             },
             Self::Translate(temperature, axis, min_offset, max_offset) => {
                 if rng.random::<f32>() <= temperature {
@@ -55,94 +50,106 @@ impl AugmentationAction {
                         }
                     } else {
                         // offset == 0 -> no change
-                        result.assign(&data);
+                        result.assign(data);
                     }
                     data.assign(&result);
+                }
+            },
+            Self::SaltAndPepperNoise(temperature, salt, pepper) => {
+                // Since iterating over all of the indices is slow, we'll instead 
+                // determine what fraction of the image should have added noise,
+                // then iterate over that many random positions and add noise that way
+                let item_count = data.len();
+                let noisy_items = (item_count as f32 * temperature) as usize;
+
+                let mut indices: Vec<usize> = (0..item_count).collect();
+                indices.shuffle(&mut rng);
+
+                let mut flat_data = data.view_mut().into_shape_with_order(item_count).unwrap();
+                for &ind in indices.iter().take(noisy_items) {
+                    flat_data[ind] = if rng.random_bool(0.5) { salt } else { pepper };
                 }
             },
         }
     }
 }
 
-impl DataAugmentation {
-    pub fn new(actions: Vec<AugmentationAction>) -> Self {
-        DataAugmentation { actions }
-    }
-
-    pub fn apply<A, D>(&self, data: &Array<A, D>) -> Array<A, D> 
-    where 
-        A: Default + Clone,
-        D: Dimension + RemoveAxis,
-    {
-        let mut data = data.to_owned();
-        for action in self.actions.iter() {
-            action.apply_in_place(&mut data);
-        }
-        data
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use ndarray::{Array2, Array3};
+
     use super::*;
 
     #[test]
     fn flip() {
-        let augmentation = DataAugmentation::new(vec![
-            AugmentationAction::Flip(1., Axis(0)),
-        ]);
-
-        let data = Array1::from_vec(vec![0., 0., 1.,]);
-        let augmented = augmentation.apply(&data);
+        let augmentation = AugmentationAction::Flip(1., Axis(0));
+        let mut data = Array1::from_vec(vec![0., 0., 1.,]);
+        augmentation.apply_in_place(&mut data);
 
         let target = Array1::from_vec(vec![1., 0., 0.,]);
-        assert_eq!(augmented, target);
+        assert_eq!(data, target);
+    }
+
+    #[test]
+    fn flip_second_axis() {
+        let augmentation_1 = AugmentationAction::Flip(1., Axis(1));
+        let augmentation_2 = AugmentationAction::Flip(1., Axis(0));
+        let mut data = Array2::from_shape_vec((2, 2), vec![
+            0., 1.,
+            0., 0.,
+        ]).unwrap();
+        augmentation_1.apply_in_place(&mut data);
+        augmentation_2.apply_in_place(&mut data);
+
+        let target = Array2::from_shape_vec((2, 2), vec![
+            0., 0.,
+            1., 0.,
+        ]).unwrap();
+        assert_eq!(data, target);
     }
 
     #[test]
     fn noise() {
-        let augmentation = DataAugmentation::new(vec![
-            AugmentationAction::Noise(1.),
-        ]);
-        todo!()
+        let augmentation = AugmentationAction::SaltAndPepperNoise(0.5, 2, 0);
+        let mut data = Array3::<u32>::from_elem((1, 2, 3), 1);
+        augmentation.apply_in_place(&mut data);
+
+        let mut n_different = 0;
+        for point in data {
+            if point != 1 {
+                n_different += 1;
+            }
+        }
+        assert_eq!(n_different, 3);
     }
 
     #[test]
     fn offset_pos() {
-        let augmentation = DataAugmentation::new(vec![
-            AugmentationAction::Translate(1., Axis(0), 1, 1),
-        ]);
-
-        let data = Array1::from_vec(vec![0., 1., 1.,]);
-        let augmented = augmentation.apply(&data);
+        let augmentation = AugmentationAction::Translate(1., Axis(0), 1, 1);
+        let mut data = Array1::from_vec(vec![0., 1., 1.,]);
+        augmentation.apply_in_place(&mut data);
 
         let target = Array1::from_vec(vec![0., 0., 1.,]);
-        assert_eq!(augmented, target);
+        assert_eq!(data, target);
     }
     
     #[test]
     fn offset_neg() {
-        let augmentation = DataAugmentation::new(vec![
-            AugmentationAction::Translate(1., Axis(0), -2, -2),
-        ]);
-
-        let data = Array1::from_vec(vec![0., 1., 1.,]);
-        let augmented = augmentation.apply(&data);
+        let augmentation = AugmentationAction::Translate(1., Axis(0), -2, -2);
+        let mut data = Array1::from_vec(vec![0., 1., 1.,]);
+        augmentation.apply_in_place(&mut data);
 
         let target = Array1::from_vec(vec![1., 0., 0.,]);
-        assert_eq!(augmented, target);
+        assert_eq!(data, target);
     }
 
     #[test]
     fn offset_zero() {
-        let augmentation = DataAugmentation::new(vec![
-            AugmentationAction::Translate(1., Axis(0), 0, 0),
-        ]);
-
-        let data = Array1::from_vec(vec![0., 0., 1.,]);
-        let augmented = augmentation.apply(&data);
+        let augmentation = AugmentationAction::Translate(1., Axis(0), 0, 0);
+        let mut data = Array1::from_vec(vec![0., 0., 1.,]);
+        augmentation.apply_in_place(&mut data);
 
         let target = Array1::from_vec(vec![0., 0., 1.,]);
-        assert_eq!(augmented, target);
+        assert_eq!(data, target);
     }
 }
