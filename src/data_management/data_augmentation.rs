@@ -3,9 +3,32 @@ use std::ops::Range;
 use ndarray::{Array, Array1, ArrayView, ArrayViewMut, Axis, Data, Dimension, RawDataClone, RemoveAxis, Slice};
 use rand::{seq::SliceRandom, Rng};
 
+/// Represents a data augmentation technique to apply to input array during training. 
+/// 
+/// Each variant specifics a different augmentation strategy and its parameters. 
 pub enum DataAugmentation<A> {
+    /// Flips the array along the specified axis with a given probability.
+    /// 
+    /// # Parameters
+    /// - `probability`: Probability of applying the flip (range: 0.0 to 1.0).
+    /// - `axis`: Axis along which to flip the data. 
     Flip(f32, Axis),
+
+    /// Translates the array along the specific axis by a random offset within a given range. 
+    /// 
+    /// # Parameters
+    /// - `probability`: Probability of applying the translation (range: 0.0 to 1.0).
+    /// - `axis`: Axis along which to shift.
+    /// - `min_offset`, `max_offset`: Bounds for randomly sampled shift amount (inclusive). A negative number denotes a shift left, 
+    ///   and a positive denotes a shift right. Note that if the range included zero, it is possible for no shift to occur. 
     Translate(f32, Axis, i32, i32),
+
+    /// Randomly replaces pixel with either `salt` or `pepper` values (50/50 odds for either).
+    /// Typically, a low and a high value are chosen. 
+    /// 
+    /// # Parameters
+    /// - `probability`: Fraction of pixels to be affected (e.g., 0.05 means 5% of pixels will be replaced with either a `salt` or `pepper` value)
+    /// - `salt`, `pepper`: The values used for "salt" and "pepper" pixels respectively; typically 1.0 and 0.0.
     SaltAndPepperNoise(f32, A, A),
     /*
     GaussianNoise(f32), // Gaussian distribution
@@ -15,6 +38,7 @@ pub enum DataAugmentation<A> {
 }
 
 impl<A> DataAugmentation<A> {
+    /// Applies this data augmentation to `data` in place. 
     pub fn apply_in_place<D>(&self, data: &mut Array<A, D>) 
     where 
         A: Default + Clone + Copy,
@@ -22,17 +46,17 @@ impl<A> DataAugmentation<A> {
     {
         let mut rng = rand::rng();
         match *self {
-            Self::Flip(temperature, axis) => {
-                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+            Self::Flip(probability, axis) => {
+                debug_assert!((0. ..=1.).contains(&probability), "Invalid probability value provided: {probability}");
 
-                if rng.random::<f32>() <= temperature {
+                if rng.random::<f32>() <= probability {
                     data.invert_axis(axis);
                 }
             },
-            Self::Translate(temperature, axis, min_offset, max_offset) => {
-                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+            Self::Translate(probability, axis, min_offset, max_offset) => {
+                debug_assert!((0. ..=1.).contains(&probability), "Invalid probability value provided: {probability}");
 
-                if rng.random::<f32>() <= temperature {
+                if rng.random::<f32>() <= probability {
                     let offset = rng.random_range(min_offset..=max_offset) as isize;
                     let mut result = Array::from_elem(data.dim(), A::default());
                     let len = data.len_of(axis) as isize;
@@ -59,14 +83,14 @@ impl<A> DataAugmentation<A> {
                     data.assign(&result);
                 }
             },
-            Self::SaltAndPepperNoise(temperature, salt, pepper) => {
-                debug_assert!((0. ..=1.).contains(&temperature), "Invalid temperature value provided: {temperature}");
+            Self::SaltAndPepperNoise(probability, salt, pepper) => {
+                debug_assert!((0. ..=1.).contains(&probability), "Invalid probability value provided: {probability}");
 
                 // Since iterating over all of the indices is slow, we'll instead 
                 // determine what fraction of the image should have added noise,
                 // then iterate over that many random positions and add noise that way
                 let item_count = data.len();
-                let noisy_items = (item_count as f32 * temperature) as usize;
+                let noisy_items = (item_count as f32 * probability) as usize;
 
                 let mut indices: Vec<usize> = (0..item_count).collect();
                 indices.shuffle(&mut rng);

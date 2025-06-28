@@ -45,7 +45,7 @@ where
     /// * `augmentations` - Optional list of augmentations to apply to each input. 
     /// * `batch_size` - number of samples per batch. Cannot be zero. 
     /// * `shuffle` - Whether to shuffle the dataset at the start of each call to `iter()`.
-    /// * `drop_last` - Whether to drop the last incomplete batch if the datset size isn't divisible by `batch_size`.
+    /// * `drop_last` - Whether to drop the last incomplete batch if the dataset size isn't divisible by `batch_size`.
     /// 
     /// # Panics
     /// 
