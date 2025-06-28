@@ -1,7 +1,6 @@
 use ndarray::{Array1, Array2, Axis};
 use super::LossFunction;
 
-
 /// Cross Entropy Loss with Logits (CEL). 
 /// 
 /// Used for multi-class classification tasks where the output is a distribution over classes. 
