@@ -3,7 +3,8 @@
 ## Currently working on:
 
 -   More safety assertions throughout codebase, especially within layers
--   Some docstrings
+-   Some docstrings -> layers, optimizers, and examples
+-   Fully comment example code (don't overdo it, though)
 
 ## Next up:
 
