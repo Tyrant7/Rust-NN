@@ -2,13 +2,14 @@ use std::{fs::{remove_file, File}, io::{Read, Write}};
 
 use serde::{ser::Serialize, de::DeserializeOwned};
 
-use crate::layers::CompositeLayer;
-
-// TODO: Docstrings
-
+/// Serializes a model's learned state (e.g. weights and biases) and writes it to a file at the given `path`.
+/// This does **not** include transient state such as cached forward input or temporary masks. 
+/// 
+/// # Errors
+/// Returns an `Err` if serialization or file writing fails. 
 pub fn save_model_state<M>(model: &M, path: &str) -> std::io::Result<()>
 where 
-    M: CompositeLayer + Serialize,
+    M: Serialize,
 {
     let result = serde_json::to_string_pretty(model)?;
     let mut file = File::create(path)?;
@@ -16,9 +17,16 @@ where
     Ok(())
 }
 
+/// Deserializes a model's learned state from the file at `path`.
+/// 
+/// # Returns
+/// The reconstructed model of type `M`.
+/// 
+/// # Errors
+/// Returns an `Err` if reading or deserialization fails. 
 pub fn load_model_state<M>(path: &str) -> std::io::Result<M>
 where 
-    M: CompositeLayer + DeserializeOwned
+    M: DeserializeOwned
 {
     let mut file = File::open(path)?;
     let mut contents = String::new();
@@ -29,9 +37,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
-    use crate::layers::{Convolutional2D, MaxPool2D};
-    use crate::save_load::{save_model_state, load_model_state};
+    use super::*;
+    use crate::chain;
+    use crate::layers::{CompositeLayer, Tracked, Chain, Convolutional2D, Linear, ReLU, Flatten, MaxPool2D};
     use ndarray::Array;
     use rand::distr::{Alphanumeric, SampleString};
     use rand::random;
