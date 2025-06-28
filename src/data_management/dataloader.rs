@@ -5,6 +5,10 @@ use rand::seq::SliceRandom;
 
 use crate::data_management::data_augmentation::DataAugmentation;
 
+/// A data loader that handles batching, shuffling, and optional augmentation of input data. 
+/// 
+/// This is inspired by PyTorch's `DataLoader`. It loads data from a pre-split dataset,
+/// optionally applies data augmentations, and yields batches of samples during training. 
 pub struct DataLoader<'a, XType, XDim, Y> 
 {
     dataset: &'a [(ArrayView<'a, XType, XDim>, Y)],
@@ -14,6 +18,10 @@ pub struct DataLoader<'a, XType, XDim, Y>
     drop_last: bool, 
 }
 
+/// The iterator for data-label pairs. 
+/// 
+/// This iterator is primarily created by the [`DataLoader`]'s `iter()` method, and handles
+/// the actual grouping of data into batches, returning each batch as part of its `next()` method. 
 #[must_use]
 pub struct DataIter<XType, XDim, Y>
 {
@@ -29,6 +37,21 @@ where
     XDim: Clone + Dimension + RemoveAxis,
     Y: Clone,
 {
+    /// Creates a new [`DataLoader`] from a dataset and configuration options.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dataset` - A slice of `(input, label)` pairs, where inputs are `ArrayView`s.
+    /// * `augmentations` - Optional list of augmentations to apply to each input. 
+    /// * `batch_size` - number of samples per batch. Cannot be zero. 
+    /// * `shuffle` - Whether to shuffle the dataset at the start of each call to `iter()`.
+    /// * `drop_last` - Whether to drop the last incomplete batch if the datset size isn't divisible by `batch_size`.
+    /// 
+    /// # Panics
+    /// 
+    /// This function will panic if:
+    /// - `dataset` is empty.
+    /// - `batch_size` is 0. 
     pub fn new(
         dataset: &'a [(ArrayView<'a, XType, XDim>, Y)], 
         augmentations: Option<Vec<DataAugmentation<XType>>>,
@@ -36,6 +59,8 @@ where
         shuffle: bool, 
         drop_last: bool, 
     ) -> Self {
+        assert!(!dataset.is_empty(), "Attempted to create a dataloader with an empty dataset");
+        assert!(batch_size > 0, "Attempted to create a dataloader with a batch size of zero");
         DataLoader { 
             dataset, 
             augmentations, 
@@ -45,6 +70,7 @@ where
         }
     }
 
+    /// Returns a [`DataIter`] that yields batches of `(data, label)` pairs over this [`DataLoader`]'s dataset. 
     pub fn iter(&self) -> DataIter<XType, XDim, Y> {
         let mut data = self.dataset
             .iter()
@@ -68,6 +94,7 @@ where
         }
     }
 
+    /// Returns the number of batches in the dataset, excluding the last incomplete batch if `drop_last` is enabled on this [`DataLoader`]. 
     pub fn len(&self) -> usize {
         if self.drop_last {
             self.dataset.len().div(self.batch_size)
@@ -76,6 +103,7 @@ where
         }
     }
 
+    /// Returns `true` if the dataset has no elements. Typically, this can not happen. 
     pub fn is_empty(&self) -> bool {
         self.dataset.len() == 0
     }
