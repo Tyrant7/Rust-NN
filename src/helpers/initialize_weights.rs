@@ -24,7 +24,7 @@ impl SeedMode {
     }
 }
 
-/// Initializes a new set of weights according to Kaiming Normal (He) initialization.
+/// Initializes a new set of weights according to Kaiming Normal initialization.
 /// 
 /// Each value is drawn from a normal distribution with a mean of 0 and a standard deviation of `sqrt(2/n)`, 
 /// where `n` is the number of inputs to the node (i.e., the specified dimension's size). 

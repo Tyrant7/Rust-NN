@@ -4,6 +4,8 @@ use serde::{ser::Serialize, de::DeserializeOwned};
 
 use crate::layers::CompositeLayer;
 
+// TODO: Docstrings
+
 pub fn save_model_state<M>(model: &M, path: &str) -> std::io::Result<()>
 where 
     M: CompositeLayer + Serialize,
