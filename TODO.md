@@ -3,7 +3,7 @@
 ## Currently working on:
 
 -   More safety assertions throughout codebase, especially within layers
--   Some docstrings -> layers, optimizers, and examples
+-   Some docstrings -> layers
 -   Fully comment example code (don't overdo it, though)
 
 ## Next up:
@@ -42,6 +42,8 @@
     an application to a library
 -   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
 -   Format (but make sure not to reformat a lot of tests for clarity)
+-   Move `examples/` directory to outside of `src/` and test everything works there
+    -   This will help to ensure that all exports are working right
 -   Publish to Crates.io
 
 ## Fixes
