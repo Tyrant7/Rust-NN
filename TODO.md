@@ -33,6 +33,7 @@
 -   More data augmentation options (other noise types, blurring, etc.)
 -   Better graphing features
     -   Line charts, naming the charts, choosing the path, etc.
+-   GPU training and testing support
 
 ## For publishing:
 
@@ -40,6 +41,7 @@
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
+-   Format (but make sure not to reformat a lot of tests for clarity)
 -   Publish to Crates.io
 
 ## Fixes

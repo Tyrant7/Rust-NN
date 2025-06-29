@@ -1,8 +1,8 @@
 use ndarray::{Array, ArrayD};
 
 use crate::layers::LearnableParameter;
-
 use super::Optimizer;
+
 
 #[allow(clippy::upper_case_acronyms)]
 pub struct SGD {
