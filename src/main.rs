@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 //! A lightweight deep learning framework for machine learning in Rust. 
 //! 
