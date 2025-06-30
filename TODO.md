@@ -20,6 +20,8 @@
     -   First, create default "pooling layer" type
     -   Then, can add different layers by defining their "choose" method
     -   Avg pooling
+-   Residual block support
+    -   Not sure how to do this yet. Many options on how they could work
 
 ## Other features:
 
