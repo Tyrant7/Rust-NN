@@ -5,6 +5,16 @@ use ndarray::{Array, Array2, ArrayD, Dimension, IntoDimension, IxDyn};
 
 use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 
+/// A compositional wrapper for chaining multiple layers, allowing their forward and backward passes to be connected seamlessly.
+/// 
+/// [`Chain`] composes two [`CompositeLayer`]s, forwarding outputs from `inner` to `next`, and ensuring that 
+/// each layer is receiving its expected shapes from the last. 
+/// 
+/// Chained layers are most often wrapped in a [`Tracked`] layer in order to allow [`RawLayer`]s to be chained. 
+/// 
+/// # Panics
+/// Panics in both [`Chain::forward`] and [`Chain::backward`] if the output shape of `inner` can not be converted to the input 
+/// shape of `next`. 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chain<L1, L2>
 where 
@@ -20,6 +30,10 @@ where
     L1: CompositeLayer,
     L2: CompositeLayer,
 {
+    /// Creates a [`Chain`] with the given layers. 
+    /// 
+    /// It is recommended to use the [`chain!`] macro instead of calling this method directly, as it simplifies
+    /// chaining and ensures layer are wrapped in [`Tracked`] when needed.   
     pub fn new(inner: L1, next: L2) -> Self {
         Self { 
             inner, 
@@ -27,6 +41,7 @@ where
         }
     }
 
+    /// Returns a reference to the `inner` layer of this [`Chain`]. 
     pub fn inner(&self) -> &L1 {
         &self.inner
     }
@@ -64,6 +79,9 @@ where
     }
 }
 
+/// This macro recursively chains together any number of layers, wrapping each one in a [`Tracked`] layer to
+/// enable automatic input tracking. It simplifies the construction of deep networks without manually nesting 
+/// [`Chain`] and [`Tracked`] calls. 
 #[macro_export]
 macro_rules! chain {
     ($a:expr) => {
