@@ -56,7 +56,6 @@ pub fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
 /// 
 /// `input` should be larger than `kernel`. `stride` defines the step size of the sliding window. 
 /// For performance reasons, the result is written directly into the `output` buffer, which must be pre-allocated with the correct shape. 
-#[inline(always)]
 pub fn convolve2d(input: &ArrayView2<f32>, kernel: &ArrayView2<f32>, output: &mut ArrayViewMut2<f32>, stride: (usize, usize)) {
     let (k_h, k_w) = kernel.dim();
     let (s_y, s_x) = stride;
