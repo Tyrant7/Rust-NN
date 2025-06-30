@@ -2,8 +2,8 @@
 
 ## Currently working on:
 
+-   Remaining docstrings -> conv, pooling, and chain left
 -   More safety assertions throughout codebase, especially within layers
--   Some docstrings -> layers
 -   Fully comment example code (don't overdo it, though)
 
 ## Next up:
