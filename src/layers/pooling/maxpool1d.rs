@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{helpers::conv_helpers::{crop_3d, pad_3d}, layers::{ParameterGroup, RawLayer}};
 
-/// A layer that handles 1D max pooling over spatial or temporal data. 
+/// A layer that performs 1D max pooling over spatial or temporal data. 
 /// 
 /// Pooling layers are widely used in machine learning tasks involving spatial or temporal data, such
 /// as images, audio and text. They are well-suited for reducing the size and complexity of spatial dimensions
@@ -18,16 +18,15 @@ use crate::{helpers::conv_helpers::{crop_3d, pad_3d}, layers::{ParameterGroup, R
 /// output_width = floor((width - kernel_width + (2 * padding)) / stride) + 1;
 /// ```
 /// 
-/// 
-/// Max pooling occurs over each feature in the input, and works by sliding a kernel over the input by `stride` steps,
-/// and reducing each overlapping group with the highest value currently overlapping the kernel. 
+/// Max pooling occurs over each feature in the input. It works by sliding a kernel over the input by `stride` steps,
+/// and reducing each set of overlapping data to the highest value currently overlapping the kernel. 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaxPool1D {
     kernel_width: usize,
     stride: usize,
     padding: usize,
 
-    /// Stores the index of maximum element selected during the forward pass
+    /// Stores the indices of maximum elements selected during the forward pass
     /// for each window position. Used to route gradients in `backward`. 
     #[serde(skip)]
     max_indices: Option<Array3<usize>>

@@ -62,7 +62,7 @@ impl Convolutional2D {
     /// All pairs during initialization are expected in `(height, width)` format.
     /// 
     /// # Panics
-    /// - If any of `in_features`, `out_features`, or `kernel_width` are zero.  
+    /// - If any of `in_features`, `out_features`, `kernel_size.0` or `kernel_size.1` are zero. 
     /// - If `stride` is zero.
     pub fn new_from_rand(
         in_features: usize, 
