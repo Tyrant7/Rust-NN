@@ -5,9 +5,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 
-/// A wrapper forward that records the forward inputs for later use in backpropagation.
+/// A wrapper for layers that records the forward inputs for later use in backpropagation.
 /// 
-/// `Tracked` is used to bridge [`RawLayer`]s into contexts where a [`CompositeLayer`] is expected, such as when building 
+/// [`Tracked`] is used to bridge [`RawLayer`]s into contexts where a [`CompositeLayer`] is expected, such as when building 
 /// a [`Chain`] of layers. It enables proper gradient calculation by saving the input passed to [`RawLayer::forward`] during
 /// training, so that it can be reused during the call to [`RawLayer::backward`]. 
 /// 
@@ -16,7 +16,7 @@ use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
 /// During inference (i.e., when `train = false`), the forward input is not saved to conserve memory. 
 /// 
 /// # Panics
-/// Panics in [`CompositeLayer::backward`] if it is called before training-mode forward pass has occured. 
+/// Panics in [`Tracked::backward`] if it is called before training-mode forward pass has occured. 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tracked<L>
 where 
