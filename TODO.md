@@ -2,12 +2,12 @@
 
 ## Currently working on:
 
--   Remaining docstrings -> conv, pooling, and chain left
+-   Remaining docstrings -> pooling, and chain left
 -   More safety assertions throughout codebase, especially within layers
--   Fully comment example code (don't overdo it, though)
 
 ## Next up:
 
+-   Parallelization utilities and adapt MNIST to use these
 -   Generic IDX file reading solution
 
 ## Layer types:
@@ -46,6 +46,7 @@
 -   Format (but make sure not to reformat a lot of tests for clarity)
 -   Move `examples/` directory to outside of `src/` and test everything works there
     -   This will help to ensure that all exports are working right
+    -   Also comment and cleanup example code
 -   Publish to Crates.io
 
 ## Fixes
