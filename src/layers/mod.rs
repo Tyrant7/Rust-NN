@@ -27,21 +27,21 @@ pub trait RawLayer: std::fmt::Debug {
     /// Performs a forward pass through the layer. 
     /// 
     /// # Arguments
-    /// - `input`: Input tensor with shape matching [`Self::Input`]. Must include batch as the first axis. 
+    /// - `input`: Input tensor with dimensionality matching [`Self::Input`]. Must include batch as the first axis. 
     /// - `train`: Whether the forward pass is occuring during training (used by layers like [`Dropout`]). 
     ///  
     /// # Returns
-    /// The output tensor with shape matching [`Self::Output`]. 
+    /// The output tensor with dimensionality matching [`Self::Output`]. 
     fn forward(&mut self, input: &Array<f32, Self::Input>, train: bool) -> Array<f32, Self::Output>;
 
     /// Performs a backward pass through the layer. 
     /// 
     /// # Arguments
-    /// - `error`: The error signal received from the next layer or loss function. Shape must match [`Self::Output`]. 
+    /// - `error`: The error signal received from the next layer or loss function. Dimensionality must match [`Self::Output`]. 
     /// - `forward_input`: The input originally passed to [`Self::forward`]. Typically provided by a [`Tracked`] wrapper. 
     /// 
     /// # Returns
-    /// The gradient to be propagated to the previous layer. Shape must match [`Self::Input`]. 
+    /// The gradient to be propagated to the previous layer. Dimensionality must match [`Self::Input`]. 
     fn backward(&mut self, error: &Array<f32, Self::Output>, forward_input: &Array<f32, Self::Input>) -> Array<f32, Self::Input>;
 
     /// Optionally returns a vector of all learnable parameters in this layer.
@@ -81,20 +81,20 @@ pub trait CompositeLayer: std::fmt::Debug {
     /// Performs a forward pass through the layer. 
     /// 
     /// # Arguments
-    /// - `input`: Input tensor with shape matching [`Self::Input`]. Must include batch as the first axis. 
+    /// - `input`: Input tensor with dimensionality matching [`Self::Input`]. Must include batch as the first axis. 
     /// - `train`: Whether the forward pass is occuring during training (used by layers like [`Dropout`]). 
     ///  
     /// # Returns
-    /// The output tensor with shape matching [`Self::Output`]. 
+    /// The output tensor with dimensionality matching [`Self::Output`]. 
     fn forward(&mut self, input: &Array<f32, Self::Input>, train: bool) -> Array<f32, Self::Output>;
 
     /// Performs a backward pass through the layer. 
     /// 
     /// # Arguments
-    /// - `error`: The error signal received from the next layer or loss function. Shape must match [`Self::Output`]. 
+    /// - `error`: The error signal received from the next layer or loss function. Dimensionality must match [`Self::Output`]. 
     /// 
     /// # Returns
-    /// The gradient to be propagated to the previous layer. Shape must match [`Self::Input`]. 
+    /// The gradient to be propagated to the previous layer. Dimensionality must match [`Self::Input`]. 
     fn backward(&mut self, error: &Array<f32, Self::Output>) -> Array<f32, Self::Input>;
 
     /// Optionally returns a vector of all learnable parameters in this layer.
