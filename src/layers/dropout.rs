@@ -4,6 +4,25 @@ use serde::{Deserialize, Serialize};
 
 use super::RawLayer;
 
+/// A dropout layer that randomly disables a subset of inputs during training. 
+/// 
+/// Dropout is a regularization technique used to prevent overfitting in neural networks,
+/// especially between fully connected layers. During the forward pass in trainng mode, each input
+/// value has a probability (`rate`) of being set to zero. This forces the network to not
+/// rely too heavily on any single neuron. 
+/// 
+/// To preserve the expected magnitude of the signal, remaining (non-zeroed) values are scaled
+/// by `1 / (1 - rate)` during both forward and backward passes. 
+/// 
+/// During inference (when `train = false`), dropout is disabled and the input is passed through unchanged. 
+/// 
+/// # Parameters
+/// - `rate`: The probability of dropping each element `[0.0, 1.0]`.
+///   Typical values are `0.2` for small models and up to `0.5` for deeper architectures.
+///   Values above `0.5` are generally discouraged and may affect the model's ability to generalize effectively. 
+/// 
+/// # Panics
+/// Panics if `rate` is not within the inclusive range `[0.0, 1.0]`. 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dropout {
     rate: f32,
@@ -12,7 +31,15 @@ pub struct Dropout {
 }
 
 impl Dropout {
+    /// Creates a new [`Dropout`] layer with the given drop `rate`. 
+    /// 
+    /// # Arguments:
+    /// - `rate`: Probability of dropping each input unit (must be in `[0.0, 1.0]`).
+    /// 
+    /// # Panics
+    /// Panics if `rate` is outside the valid range.
     pub fn new(rate: f32) -> Dropout {
+        assert!((0.0..=1.).contains(&rate), "Invalid rate provided: {rate}");
         Dropout {
             rate,
             forward_mask: None,
@@ -25,7 +52,6 @@ impl RawLayer for Dropout {
     type Output = IxDyn;
 
     fn forward(&mut self, input: &ArrayD<f32>, train: bool) -> ArrayD<f32> {
-        // Dropout layers are disable outside of train mode
         if !train {
             return input.clone();
         }
