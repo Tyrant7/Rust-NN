@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
 use serde::{Deserialize, Serialize};
@@ -8,6 +6,34 @@ use crate::{helpers::conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d}, helper
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
+/// A convolutional layer that handles 1D spatial data. 
+/// 
+/// Convolutional layers are common in many areas of machine learning, from image processing, to audio
+/// and even language. They are the backbone of processing data with spatial importance, where the values
+/// of inputs may be related to those of their neighbouring inputs. 
+/// 
+/// The shape of the output is given as follows:
+/// 
+/// ```text
+/// (batch_size, out_features, output_width)
+/// where
+/// output_width = floor((width - kernel_width + 2 * self.padding) / self.stride) + 1;
+/// ```
+/// 
+/// Convolutions occur between each feature in the input, and the kernels of this convolutional layer, and then have a bias
+/// added to each output as follows:
+/// 
+/// ```text
+/// for each batch:
+///     for each output feature:
+///         for each feature in the input:
+///             output[batch, output_feature, ..] = 
+///                 convolve(input[batch, input_feature, ..], kernels[output_feature, input_feature, ..]) + bias[output_feature]
+/// ```
+/// 
+/// - Input data shape: `(batch_size, features, width)`
+/// - Kernels shape: `(out_features, in_features, kernel_width)`
+/// - Bias shape: `(out_features)`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Convolutional1D {
     kernels: ParameterGroup<Ix3>,
@@ -18,6 +44,21 @@ pub struct Convolutional1D {
 }
 
 impl Convolutional1D {
+    /// Initializes a new [`Convolutional1D`] layer with random kernels of the given shape and zero bias (if enabled) using the Kaiming Normal initialization.  
+    /// 
+    /// This is the standard way to initialize a convolutional layer for training. 
+    /// 
+    /// # Arguments
+    /// - `in_features`: Number of input features. 
+    /// - `out_features`: Number of output features. 
+    /// - `kernel_width`: The width of each kernel. 
+    /// - `use_bias`: Whether or not bias should be added to each output. 
+    /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
+    /// - `padding`: The padding to add to the input before convolutions are performed. 
+    /// 
+    /// # Panics
+    /// - If any of `in_features`, `out_features`, or `kernel_width` are zero.  
+    /// - If `stride` is zero.
     pub fn new_from_rand(
         in_features: usize, 
         out_features: usize, 
@@ -26,6 +67,10 @@ impl Convolutional1D {
         stride: usize, 
         padding: usize,
     ) -> Self {
+        assert!(in_features > 0, "Invalid input feature count: {in_features}");
+        assert!(out_features > 0, "Invalid output feature count: {out_features}");
+        assert!(kernel_width > 0, "Invalid kernel width: {kernel_width}");
+
         let kernels = kaiming_normal((out_features, in_features, kernel_width), 1, SeedMode::Random);
         let bias = match use_bias {
             true => Some(Array1::zeros(out_features)),
@@ -34,12 +79,28 @@ impl Convolutional1D {
         Convolutional1D::new_from_kernels(kernels, bias, stride, padding)
     }
 
+    /// Initializes a new [`Convolutional1D`] layer with given kernels and bias (if enabled).  
+    /// 
+    /// # Parameters
+    /// - `kernels`: The kernels to use for the convolution. Should have the shape `(out_features, in_features, kernel_width)`.
+    /// - `bias`: The bias to add to each output feature. Should have the shape `(out_features)`.
+    /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
+    /// - `padding`: The padding to add to the input before convolutions are performed. 
+    /// 
+    /// # Panics
+    /// - If `bias` and `kernels` do not share the same number of input features when bias exists (first dimension length). 
+    /// - If `stride` is zero.
     pub fn new_from_kernels(
         kernels: Array3<f32>, 
         bias: Option<Array1<f32>>,
         stride: usize, 
         padding: usize,
     ) -> Self {
+        assert!(stride > 0, "Invalid stride given: {stride}");
+        if let Some(b) = &bias {
+            assert!(b.dim() == kernels.dim().0, "Shape mismatch between kernels and bias: {:?}, {:?}", kernels.dim(), b.dim());
+        }
+
         let kernels = ParameterGroup::new(kernels);
         let bias = bias.map(ParameterGroup::new);
         Convolutional1D { 
@@ -55,7 +116,7 @@ impl RawLayer for Convolutional1D {
     type Input = Ix3;
     type Output = Ix3;
     
-    /// Expected input shape: (batch_size, features, width)
+    // Expected input shape: (batch_size, features, width)
     fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
 

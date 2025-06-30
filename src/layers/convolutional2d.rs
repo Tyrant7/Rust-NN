@@ -8,6 +8,7 @@ use crate::{helpers::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helper
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Convolutional2D {
     kernels: ParameterGroup<Ix4>,
