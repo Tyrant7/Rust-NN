@@ -2,13 +2,12 @@
 
 ## Currently working on:
 
--   Remaining docstrings -> pooling, and chain left
--   More safety assertions throughout codebase, especially within layers
+-   Double check safety assertions throughout codebase, especially within layers
+-   Format (but make sure not to reformat a lot of tests for clarity)
 
 ## Next up:
 
 -   Parallelization utilities and adapt MNIST to use these
--   Generic IDX file reading solution
 
 ## Layer types:
 
@@ -25,11 +24,13 @@
 
 ## Other features:
 
+-   Generic IDX file reading solution
 -   Gradient clipping
 -   Add more debug features
     -   Pretty layer printouts
     -   Complete random seeding, too
     -   Additional logging for debug mode
+    -   Expose more fields within layers publicly to read for debugging
 -   More loss functions (MAE, Huber Loss, etc.)
 -   More activation functions (leaky ReLU, Tanh, etc.)
 -   More data augmentation options (other noise types, blurring, etc.)
@@ -42,8 +43,6 @@
 -   "README" on GitHub explaining the library
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
--   Full docstrings complete with examples for entire API (should definitely include expected shapes to any methods which take them)
--   Format (but make sure not to reformat a lot of tests for clarity)
 -   Move `examples/` directory to outside of `src/` and test everything works there
     -   This will help to ensure that all exports are working right
     -   Also comment and cleanup example code
