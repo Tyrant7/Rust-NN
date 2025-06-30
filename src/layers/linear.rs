@@ -49,11 +49,12 @@ impl Linear {
 
     /// Initializes a new [`Linear`] layer with random weights and zero bias using the Kaiming Normal initialization.  
     /// 
+    /// This is the standard way to initialize a dense layer for training. 
+    /// 
     /// # Arguments
     /// - `inputs`: Number of input features (size of each input vector)
     /// - `outputs`: Number of output features (size of each output vector)
     /// 
-    /// This is the standard way to initialize a dense layer for training. 
     pub fn new_from_rand(
         inputs: usize, 
         outputs: usize, 
