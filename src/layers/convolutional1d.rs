@@ -8,9 +8,9 @@ use super::{RawLayer, LearnableParameter, ParameterGroup};
 
 /// A convolutional layer that handles 1D spatial data. 
 /// 
-/// Convolutional layers are common in many areas of machine learning, from image processing, to audio
-/// and even language. They are the backbone of processing data with spatial importance, where the values
-/// of inputs may be related to those of their neighbouring inputs. 
+/// Convolutional layers are widely used in machine learning tasks involving spatial or temporal data, such
+/// as iamges, audio, and text. They are well-suited for extracting local features by applying learnable kernels
+/// over input features with spatial relationships. 
 /// 
 /// The shape of the output is given as follows:
 /// 

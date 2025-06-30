@@ -8,7 +8,35 @@ use crate::{helpers::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d}, helper
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
-
+/// A convolutional layer that handles 2D spatial data. 
+/// 
+/// Convolutional layers are widely used in machine learning tasks involving spatial or temporal data, such
+/// as iamges, audio, and text. They are well-suited for extracting local features by applying learnable kernels
+/// over input features with spatial relationships. 
+/// 
+/// The shape of the output is given as follows:
+/// 
+/// ```text
+/// (batch_size, out_features, output_height, output_width)
+/// where
+/// output_height = floor((height - kernel_height + 2 * self.padding.0) / self.stride.0) + 1;
+/// output_width =  floor((width  - kernel_width  + 2 * self.padding.1) / self.stride.1) + 1;
+/// ```
+/// 
+/// Convolutions occur between each feature in the input, and the kernels of this convolutional layer, and then have a bias
+/// added to each output as follows:
+/// 
+/// ```text
+/// for each batch:
+///     for each output feature:
+///         for each feature in the input:
+///             output[batch, output_feature, .., ..] = 
+///                 convolve(input[batch, input_feature, .., ..], kernels[output_feature, input_feature, .., ..]) + bias[output_feature]
+/// ```
+/// 
+/// - Input data shape: `(batch_size, features, height, width)`
+/// - Kernels shape: `(out_features, in_features, kernel_height, kernel_width)`
+/// - Bias shape: `(out_features)`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Convolutional2D {
     kernels: ParameterGroup<Ix4>,
@@ -19,7 +47,23 @@ pub struct Convolutional2D {
 }
 
 impl Convolutional2D {
-    /// Pairs will follow order of (height, width)
+    /// Initializes a new [`Convolutional2D`] layer with random kernels of the given shape and zero bias (if enabled) using the Kaiming Normal initialization.  
+    /// 
+    /// This is the standard way to initialize a convolutional layer for training. 
+    /// 
+    /// # Arguments
+    /// - `in_features`: Number of input features. 
+    /// - `out_features`: Number of output features. 
+    /// - `kernel_size`: The size of each kernel.  
+    /// - `use_bias`: Whether or not bias should be added to each output. 
+    /// - `stride`: The strides to use during the convolutions between the kernels and input features. 
+    /// - `padding`: The paddings to add to the input before convolutions are performed. 
+    /// 
+    /// All pairs during initialization are expected in `(height, width)` format.
+    /// 
+    /// # Panics
+    /// - If any of `in_features`, `out_features`, or `kernel_width` are zero.  
+    /// - If `stride` is zero.
     pub fn new_from_rand(
         in_features: usize, 
         out_features: usize, 
@@ -28,6 +72,10 @@ impl Convolutional2D {
         stride: (usize, usize), 
         padding: (usize, usize),
     ) -> Self {
+        assert!(in_features > 0, "Invalid input feature count: {in_features}");
+        assert!(out_features > 0, "Invalid output feature count: {out_features}");
+        assert!(kernel_size.0 > 0 && kernel_size.1 > 0, "Invalid kernel size: {kernel_size:?}");
+
         let kernels = kaiming_normal((out_features, in_features, kernel_size.0, kernel_size.1), 1, SeedMode::Random);
         let bias = match use_bias {
             true => Some(Array1::zeros(out_features)),
@@ -36,13 +84,30 @@ impl Convolutional2D {
         Convolutional2D::new_from_kernels(kernels, bias, stride, padding)
     }
 
-    /// Stride and padding will follow order of (height, width)
+    /// Initializes a new [`Convolutional2D`] layer with given kernels and bias (if enabled).  
+    /// 
+    /// # Parameters
+    /// - `kernels`: The kernels to use for the convolution. Should have the shape `(out_features, in_features, kernel_height, kernel_width)`.
+    /// - `bias`: The bias to add to each output feature. Should have the shape `(out_features)`.
+    /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
+    /// - `padding`: The padding to add to the input before convolutions are performed. 
+    /// 
+    /// All pairs during initialization are expected in `(height, width)` format.
+    /// 
+    /// # Panics
+    /// - If `bias` and `kernels` do not share the same number of input features when bias exists (first dimension length). 
+    /// - If any dimension of `stride` is zero.
     pub fn new_from_kernels(
         kernels: Array4<f32>, 
         bias: Option<Array1<f32>>,
         stride: (usize, usize), 
         padding: (usize, usize),
     ) -> Self {
+        assert!(stride.0 > 0 && stride.1 > 0, "Invalid stride given: {stride:?}");
+        if let Some(b) = &bias {
+            assert!(b.dim() == kernels.dim().0, "Shape mismatch between kernels and bias: {:?}, {:?}", kernels.dim(), b.dim());
+        }
+
         let kernels = ParameterGroup::new(kernels);
         let bias = bias.map(ParameterGroup::new);
         Convolutional2D { 
@@ -58,7 +123,7 @@ impl RawLayer for Convolutional2D {
     type Input = Ix4;
     type Output = Ix4;
 
-    /// Expected input shape: (batch_size, features, height, width)
+    // Expected input shape: (batch_size, features, height, width)
     fn forward(&mut self, input: &Array4<f32>, _train: bool) -> Array4<f32> {
         let (batch_size, in_features, height, width) = input.dim();
 
