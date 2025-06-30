@@ -11,7 +11,7 @@ use super::{RawLayer, LearnableParameter, ParameterGroup};
 /// A convolutional layer that handles 2D spatial data. 
 /// 
 /// Convolutional layers are widely used in machine learning tasks involving spatial or temporal data, such
-/// as iamges, audio, and text. They are well-suited for extracting local features by applying learnable kernels
+/// as images, audio, and text. They are well-suited for extracting local features by applying learnable kernels
 /// over input features with spatial relationships. 
 /// 
 /// The shape of the output is given as follows:
@@ -19,8 +19,8 @@ use super::{RawLayer, LearnableParameter, ParameterGroup};
 /// ```text
 /// (batch_size, out_features, output_height, output_width)
 /// where
-/// output_height = floor((height - kernel_height + 2 * self.padding.0) / self.stride.0) + 1;
-/// output_width =  floor((width  - kernel_width  + 2 * self.padding.1) / self.stride.1) + 1;
+/// output_height = floor((height - kernel_height + 2 * padding.0) / stride.0) + 1;
+/// output_width =  floor((width  - kernel_width  + 2 * padding.1) / stride.1) + 1;
 /// ```
 /// 
 /// Convolutions occur between each feature in the input, and the kernels of this convolutional layer, and then have a bias
@@ -57,7 +57,7 @@ impl Convolutional2D {
     /// - `kernel_size`: The size of each kernel.  
     /// - `use_bias`: Whether or not bias should be added to each output. 
     /// - `stride`: The strides to use during the convolutions between the kernels and input features. 
-    /// - `padding`: The paddings to add to the input before convolutions are performed. 
+    /// - `padding`: The paddings to add to either sides of the input before convolutions are performed. 
     /// 
     /// All pairs during initialization are expected in `(height, width)` format.
     /// 
@@ -90,7 +90,7 @@ impl Convolutional2D {
     /// - `kernels`: The kernels to use for the convolution. Should have the shape `(out_features, in_features, kernel_height, kernel_width)`.
     /// - `bias`: The bias to add to each output feature. Should have the shape `(out_features)`.
     /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
-    /// - `padding`: The padding to add to the input before convolutions are performed. 
+    /// - `padding`: The paddings to add to either sides of the input before convolutions are performed. 
     /// 
     /// All pairs during initialization are expected in `(height, width)` format.
     /// 
