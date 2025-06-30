@@ -6,6 +6,16 @@ use crate::helpers::initialize_weights::{kaiming_normal, SeedMode};
 
 use super::{RawLayer, LearnableParameter, ParameterGroup};
 
+/// A Linear Layer (also known as a Fully Connected or Dense Layer). 
+/// 
+/// Applies a linear transformation to incoming data:
+/// `output = input x t(weights) + bias`
+/// 
+/// - Input shape: `(batch_size, input_size)`
+/// - Weights shape: `(output_size, input_size)`
+/// - Bias shape: `(1, output_size)`
+/// 
+/// This is often used in Multi-Layer Perceptrons (MLPs) or as a final layer in classification/regression models.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Linear {
     weights: ParameterGroup<Ix2>,
@@ -13,6 +23,14 @@ pub struct Linear {
 }
 
 impl Linear {
+    /// Initializes a new [`Linear`] layer from pre-defined weight and bias parameters. 
+    /// 
+    /// # Arguments:
+    /// - `weights`: A matrix of shape `(output_size, input_size)`
+    /// - `bias`: A vector of length `output_size`
+    /// 
+    /// # Panics
+    /// Panics if `bias.len()` does not match the number of output neurons. 
     pub fn new_from_params(
         weights: Array2<f32>,
         bias: Vec<f32>,
@@ -29,6 +47,13 @@ impl Linear {
         }
     }
 
+    /// Initializes a new [`Linear`] layer with random weights and zero bias using the Kaiming Normal initialization.  
+    /// 
+    /// # Arguments
+    /// - `inputs`: Number of input features (size of each input vector)
+    /// - `outputs`: Number of output features (size of each output vector)
+    /// 
+    /// This is the standard way to initialize a dense layer for training. 
     pub fn new_from_rand(
         inputs: usize, 
         outputs: usize, 

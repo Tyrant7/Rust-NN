@@ -5,7 +5,6 @@ use super::RawLayer;
 
 /// The Rectified Linear Unit (ReLU) activation function. 
 /// 
-/// 
 /// ReLU is one of the most widely used activation functions in deep learning, particularly in hidden layers.
 /// It outputs the input value if positive, and zero otherwise, introducing non-linearity while being computationally efficient. 
 /// 
