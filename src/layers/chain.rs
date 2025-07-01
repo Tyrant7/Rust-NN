@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 
 use ndarray::{Array, Array2, ArrayD, Dimension, IntoDimension, IxDyn};
 
-use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
+use crate::layers::{CompositeLayer, RawLayer, LearnableParameter, Tracked};
 
 /// A compositional wrapper for chaining multiple layers, allowing their forward and backward passes to be connected seamlessly.
 /// 

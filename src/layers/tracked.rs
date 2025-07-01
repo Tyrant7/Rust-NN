@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use ndarray::{Array, ArrayD, Dimension};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::layers::{CompositeLayer, RawLayer, LearnableParameter};
+use crate::layers::{Chain, CompositeLayer, RawLayer, LearnableParameter};
 
 /// A wrapper for layers that records the forward inputs for later use in backpropagation.
 /// 
