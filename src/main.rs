@@ -49,7 +49,7 @@ mod profiling;
 use examples::mnist;
 
 fn main() {
-    // profiling::benchmarks::conv2d::run();
+    profiling::benchmarks::conv2d::run();
 
-    mnist::run();
+    // mnist::run();
 }

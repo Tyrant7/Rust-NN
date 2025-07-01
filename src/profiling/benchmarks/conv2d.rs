@@ -1,18 +1,29 @@
+use core::panic;
 use std::env;
 use std::fs;
 
 use colored::Colorize;
+use ndarray::Array;
 use ndarray::Array2;
 use ndarray::Array4;
+use ndarray::ArrayD;
 use ndarray::Axis;
 use ndarray::{s, Array1, Array3};
+use ndarray_stats::QuantileExt;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::chain;
+use crate::data_management::data_augmentation::DataAugmentation;
+use crate::data_management::dataloader::DataLoader;
 use crate::graphs;
+use crate::helpers::save_load;
 use crate::layers::Chain;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
+use crate::layers::Dropout;
 use crate::layers::Flatten;
 use crate::layers::Linear;
 use crate::layers::MaxPool2D;
@@ -20,20 +31,41 @@ use crate::layers::ReLU;
 use crate::layers::Tracked;
 
 use crate::layers::Sigmoid;
+use crate::loss_functions::CrossEntropyWithLogitsLoss;
 use crate::loss_functions::LossFunction;
 use crate::loss_functions::MSELoss;
 use crate::optimizers::Optimizer;
 use crate::optimizers::SGD;
 
-use super::benchmark;
+// Dataset taken from: https://www.kaggle.com/datasets/hojjatk/mnist-dataset?resource=download
 
+/// Example usage of the library solving the MNIST handwritten digit dataset with a test
+/// accuracy of about 96%
 pub fn run() {
-    let train_data_path = "data/t10k-images.idx3-ubyte";
-    let train_labels_path = "data/t10k-labels.idx1-ubyte";
-    let (train_data, train_labels) = read_data(train_data_path, train_labels_path);
+    let (train_data, train_labels) = read_data(
+        "data/train-images.idx3-ubyte",
+        "data/train-labels.idx1-ubyte",
+    );
+    // Go from (N, 28, 28) from 0-255 u8 to (N, 1, 28, 28) from 0-1 f32
+    let train_data = train_data.insert_axis(Axis(1)).map(|&v| v as f32 / 255.);
 
-    // Example usage of the library solving the MNIST handwritten digit dataset
-    let mut network = chain!(
+    let train_data_pairs = train_data
+        .outer_iter()
+        .zip(train_labels.outer_iter())
+        .collect::<Vec<_>>();
+
+    let num_classes = 10;
+    let batch_size = 64;
+
+    let train_dataloader = DataLoader::new(
+        &train_data_pairs.as_slice()[..(100 * batch_size)],
+        None,
+        batch_size,
+        true,
+        true,
+    );
+
+    let network = chain!(
         // batch, 1, 28, 28
         Convolutional2D::new_from_rand(1, 32, (3, 3), true, (1, 1), (1, 1)),
         ReLU,
@@ -50,57 +82,48 @@ pub fn run() {
         Flatten::new(1),
         // batch, 64*7*7=3136
         Linear::new_from_rand(3136, 128),
+        // batch, 3136
+        // Dropout::new(0.05),
         ReLU,
         // batch, 128
         Linear::new_from_rand(128, 10),
         // batch, 10
     );
 
-    let batch_size = 50;
-    let samples = train_data.shape()[0];
+    let time = std::time::Instant::now();
+    for (i, (x, labels)) in train_dataloader.iter().enumerate() {
+        let batch_time = std::time::Instant::now();
 
-    assert!(
-        samples % batch_size == 0,
-        "TODO: Fill empty space with zeroes. For now will error"
-    );
-    let num_batches = samples / batch_size;
+        let mini_batch_size: usize =
+            batch_size.div_ceil(std::thread::available_parallelism().unwrap().into());
+        x
+            .axis_chunks_iter(Axis(0), mini_batch_size)
+            .zip(labels.axis_chunks_iter(Axis(0), mini_batch_size))
+            .map(|d| (d, network.clone()))
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .for_each(|((mini_batch, mini_batch_labels), mut network)| {
+                let mini_batch_length = mini_batch.dim().0;
+                let pred = network.forward(&mini_batch.to_owned(), true);
 
-    let new_shape = (
-        num_batches,
-        batch_size,
-        train_data.shape()[1],
-        train_data.shape()[2],
-    );
-    let new_label_shape = (num_batches, batch_size);
-
-    let reshaped_train = train_data.to_shape(new_shape).unwrap();
-    let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
-
-    benchmark(
-        &mut |i| {
-            println!("Iteration {i}");
-
-            // Only do 10 batches for sampling
-            for (x, labels) in reshaped_train
-                .axis_iter(Axis(0))
-                .zip(reshaped_labels.axis_iter(Axis(0)))
-                .take(10)
-            {
-                let mut label_encoded = Array2::<f32>::zeros((batch_size, 10));
-                for (i, &label) in labels.iter().enumerate() {
-                    label_encoded[[i, label as usize]] = 1.;
+                let mut label_encoded = Array2::<f32>::zeros((mini_batch_length, num_classes));
+                for (i, &label) in mini_batch_labels.iter().enumerate() {
+                    label_encoded[[i, *label.into_scalar() as usize]] = 1.;
                 }
 
-                // go from shape (28, 28) to (batch, 1, 28, 28)
-                let expanded = x.insert_axis(Axis(1));
-                let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
+                // Back propagation
+                let back = CrossEntropyWithLogitsLoss::derivative(&pred, &label_encoded);
+                network.backward(&back);
+            });
+        println!(
+            "Batch {i:>3} | time: {:.0}ms",
+            batch_time.elapsed().as_millis()
+        );
+    }
 
-                let pred = network.forward(&expanded_f32, true);
-                network.backward(&MSELoss::derivative(&pred, &label_encoded));
-            }
-        },
-        10,
-        "forward + backward 10 batches",
+    println!(
+        "{}",
+        format!("Completed benchmark in {} ms", time.elapsed().as_millis()).green()
     );
 }
 
