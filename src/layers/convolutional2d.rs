@@ -157,25 +157,59 @@ impl RawLayer for Convolutional2D {
         // We only care about padding the height and width dimensions
         let input = pad_4d(&input.view(), (0, 0, self.padding.0, self.padding.1));
 
-        // 2D convolution
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
         let mut output =
             Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
+            
+        // The dimensions for our im2col matrices
+        let k = in_features * kernel_height * kernel_width;
+        let p = output_height * output_width;
+
+        // Transform the kernels into a single matrix of dimensions (out_features, k)
+        // to prepare for an im2col matrix multiplication
+        let mut kernel_matrix = Array2::zeros((out_features, k));
+        for out_f in 0..out_features {
+            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
+                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
+            );
+        }
+
+        // Perform an im2col matrix multiplication on each input in the batch
         for b in 0..batch_size {
-            for out_f in 0..out_features {
-                for in_f in 0..in_features {
-                    let input_slice = input.slice(s![b, in_f, .., ..]);
-                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, .., ..]);
-                    convolve2d(
-                        &input_slice,
-                        &kernel_slice,
-                        &mut output.slice_mut(s![b, out_f, .., ..]),
-                        self.stride,
-                    );
+            let mut input_matrix = Array2::zeros((k, p));
+            let mut patch_idx = 0;
+            let mut patch_buffer = Array1::zeros(k);
+
+            // We'll do the same thing for the input, but with dimensions (k, p)
+            // where p represents each location where the kernel can overlap the image on all dimensions
+            for out_y in 0..output_height {
+                for out_x in 0..output_width {
+                    let mut i = 0;
+                    for c in 0..in_features {
+                        for ky in 0..kernel_height {
+                            for kx in 0..kernel_width {
+                                let iy = out_y * self.stride.0 + ky;
+                                let ix = out_x * self.stride.1 + kx;
+                                patch_buffer[i] = input[[b, c, iy, ix]];
+                                i += 1;
+                            }
+                        }
+                    }
+                    input_matrix.column_mut(patch_idx).assign(&patch_buffer);
+                    patch_idx += 1;
                 }
             }
+
+            // Matrix multiply
+            let output_matrix = kernel_matrix.dot(&input_matrix);
+
+            // Remake our correct output shape and store it in the output buffer
+            let output_reshaped = output_matrix.to_owned()
+                .into_shape_with_order((out_features, output_height, output_width))
+                .unwrap();
+            output.slice_mut(s![b, .., .., ..]).assign(&output_reshaped);
         }
 
         // Apply bias to the second dimension (features)
