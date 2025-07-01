@@ -1,7 +1,7 @@
 use ndarray::{ArrayD, IxDyn};
 use serde::{Deserialize, Serialize};
 
-use super::RawLayer;
+use crate::layers::RawLayer;
 
 /// The sigmoid activation function. 
 /// 

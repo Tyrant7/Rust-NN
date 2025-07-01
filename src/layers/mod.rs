@@ -189,10 +189,9 @@ pub use pooling::maxpool2d::MaxPool2D;
 pub mod flatten;
 pub use flatten::Flatten;
 
-pub mod relu;
-pub use relu::ReLU;
-pub mod sigmoid;
-pub use sigmoid::Sigmoid;
+pub mod activations;
+pub use activations::relu::ReLU;
+pub use activations::sigmoid::Sigmoid;
 
 #[cfg(test)]
 pub mod tests {
