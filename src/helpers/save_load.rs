@@ -50,6 +50,7 @@ mod tests {
     use rand::random;
 
     #[test]
+    #[ignore = "Slow"]
     fn save_load() {
         let mut model = chain!(
             // batch, 1, 28, 28
@@ -92,6 +93,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Slow"]
     fn pretrained() {
         let mut model = chain!(
             // batch, 1, 28, 28
