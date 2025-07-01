@@ -43,7 +43,7 @@ mod tests {
     use super::*;
     use crate::chain;
     use crate::layers::{
-        Chain, CompositeLayer, Convolutional2D, Flatten, Linear, MaxPool2D, ReLU, Tracked,
+        Chain, CompositeLayer, Convolutional2D, Dropout, Flatten, Linear, MaxPool2D, ReLU, Tracked,
     };
     use ndarray::Array;
     use rand::distr::{Alphanumeric, SampleString};
