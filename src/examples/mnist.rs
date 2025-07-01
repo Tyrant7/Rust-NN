@@ -23,6 +23,7 @@ use crate::layers::Chain;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
+use crate::layers::Dropout;
 use crate::layers::Flatten;
 use crate::layers::Linear;
 use crate::layers::MaxPool2D;
@@ -99,6 +100,8 @@ pub fn run() {
         Flatten::new(1),
         // batch, 64*7*7=3136
         Linear::new_from_rand(3136, 128),
+        // batch, 3136
+        Dropout::new(0.05),
         ReLU,
         // batch, 128
         Linear::new_from_rand(128, 10),

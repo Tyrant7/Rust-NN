@@ -68,6 +68,8 @@ mod tests {
             Flatten::new(1),
             // batch, 64*7*7=3136
             Linear::new_from_rand(3136, 128),
+            // batch, 3136
+            Dropout::new(0.05),
             ReLU,
             // batch, 128
             Linear::new_from_rand(128, 10),
@@ -108,6 +110,8 @@ mod tests {
             Flatten::new(1),
             // batch, 64*7*7=3136
             Linear::new_from_rand(3136, 128),
+            // batch, 3136
+            Dropout::new(0.05),
             ReLU,
             // batch, 128
             Linear::new_from_rand(128, 10),
