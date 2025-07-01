@@ -145,30 +145,20 @@ impl RawLayer for Convolutional1D {
         // 1D convolution
         let (out_features, _, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding)) / self.stride) + 1;
-        let mut batch_outputs =
-            vec![Array2::<f32>::zeros((out_features, output_width)); batch_size];
-
-        batch_outputs
-            .iter_mut()
-            .enumerate()
-            .for_each(|(b, batch_output)| {
-                for out_f in 0..out_features {
-                    for in_f in 0..in_features {
-                        let input_slice = input.slice(s![b, in_f, ..]);
-                        let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
-                        convolve1d(
-                            input_slice,
-                            kernel_slice,
-                            &mut batch_output.slice_mut(s![out_f, ..]),
-                            self.stride,
-                        );
-                    }
-                }
-            });
-
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
-        for (b, batch) in batch_outputs.into_iter().enumerate() {
-            output.slice_mut(s![b, .., ..]).assign(&batch);
+        for b in 0..batch_size {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
+                    let input_slice = input.slice(s![b, in_f, ..]);
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
+                    convolve1d(
+                        input_slice,
+                        kernel_slice,
+                        &mut output.slice_mut(s![b, out_f, ..]),
+                        self.stride,
+                    );
+                }
+            }
         }
 
         // Apply bias to the second dimension (features)
@@ -192,76 +182,50 @@ impl RawLayer for Convolutional1D {
         let signal_width = output_width + kernel_width - 1;
 
         // Compute kernel gradients and error signal for backpropagation in a single step to save performance
-        let mut batch_signals = vec![Array2::<f32>::zeros((in_features, signal_width)); batch_size];
-        let mut kernel_grads = vec![Array3::<f32>::zeros(self.kernels.gradients.dim()); batch_size];
-        let mut bias_grads = if let Some(b) = &self.bias {
-            vec![Some(Array1::<f32>::zeros(b.gradients.dim())); batch_size]
-        } else {
-            vec![None; batch_size]
-        };
+        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
+        for b in 0..batch_size {
+            for out_f in 0..out_features {
+                for in_f in 0..in_features {
+                    // Kernel gradients
+                    // Align error slice with input slice
+                    let input_slice = forward_input.slice(s![b, in_f, ..]);
+                    let error_slice = delta.slice(s![b, out_f, ..]);
 
-        batch_signals
-            .iter_mut()
-            .zip(kernel_grads.iter_mut())
-            .zip(bias_grads.iter_mut())
-            .enumerate()
-            .for_each(|(b, ((batch_signal, kernel_grad), bias_grad))| {
-                for out_f in 0..out_features {
-                    for in_f in 0..in_features {
-                        // Kernel gradients
-                        // Align error slice with input slice
-                        let input_slice = forward_input.slice(s![b, in_f, ..]);
-                        let error_slice = delta.slice(s![b, out_f, ..]);
-
-                        // In some cases, the loss may actually be larger than the input due to padding
-                        // In these cases, we can swap the kernel and input to achieve the desired result
-                        // without causing a shape error
-                        if error_slice.dim() < input_slice.dim() {
-                            convolve1d(
-                                input_slice,
-                                error_slice,
-                                &mut kernel_grad.slice_mut(s![out_f, in_f, ..]),
-                                1,
-                            );
-                        } else {
-                            convolve1d(
-                                error_slice,
-                                input_slice,
-                                &mut kernel_grad.slice_mut(s![out_f, in_f, ..]),
-                                1,
-                            );
-                        };
-
-                        // Error signal
-                        // Flip over width dimension (180 rotation)
-                        let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
-                        let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
+                    // In some cases, the loss may actually be larger than the input due to padding
+                    // In these cases, we can swap the kernel and input to achieve the desired result
+                    // without causing a shape error
+                    if error_slice.dim() < input_slice.dim() {
                         convolve1d(
-                            padded.view(),
-                            kernel_slice,
-                            &mut batch_signal.slice_mut(s![in_f, ..]),
+                            input_slice,
+                            error_slice,
+                            &mut self.kernels.gradients.slice_mut(s![out_f, in_f, ..]),
                             1,
                         );
-                    }
+                    } else {
+                        convolve1d(
+                            error_slice,
+                            input_slice,
+                            &mut self.kernels.gradients.slice_mut(s![out_f, in_f, ..]),
+                            1,
+                        );
+                    };
 
-                    // Compute bias gradients
-                    if let Some(bias) = &mut *bias_grad {
-                        bias[out_f] += delta.slice(s![b, out_f, ..]).sum();
-                    }
+                    // Error signal
+                    // Flip over width dimension (180 rotation)
+                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
+                    let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
+                    convolve1d(
+                        padded.view(),
+                        kernel_slice,
+                        &mut error_signal.slice_mut(s![b, in_f, ..]),
+                        1,
+                    );
                 }
-            });
 
-        // Collect full signals
-        let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
-        for (b, batch) in batch_signals.into_iter().enumerate() {
-            error_signal.slice_mut(s![b, .., ..]).assign(&batch);
-        }
-        for grad in kernel_grads.into_iter() {
-            self.kernels.gradients += &grad;
-        }
-        if let Some(bias) = &mut self.bias {
-            for grad in bias_grads.into_iter().flatten() {
-                bias.gradients += &grad;
+                // Compute bias gradients
+                if let Some(bias) = &mut self.bias {
+                    bias.gradients[out_f] += delta.slice(s![b, out_f, ..]).sum();
+                }
             }
         }
 
