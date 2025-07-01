@@ -177,10 +177,10 @@ impl RawLayer for Convolutional2D {
         }
 
         // Perform an im2col matrix multiplication on each input in the batch
+        let mut input_matrix = Array2::zeros((k, p));
+        let mut patch_buffer = Array1::zeros(k);
         for b in 0..batch_size {
-            let mut input_matrix = Array2::zeros((k, p));
             let mut patch_idx = 0;
-            let mut patch_buffer = Array1::zeros(k);
 
             // We'll do the same thing for the input, but with dimensions (k, p)
             // where p represents each location where the kernel can overlap the image on all dimensions
@@ -206,7 +206,7 @@ impl RawLayer for Convolutional2D {
             let output_matrix = kernel_matrix.dot(&input_matrix);
 
             // Remake our correct output shape and store it in the output buffer
-            let output_reshaped = output_matrix.to_owned()
+            let output_reshaped = output_matrix
                 .into_shape_with_order((out_features, output_height, output_width))
                 .unwrap();
             output.slice_mut(s![b, .., .., ..]).assign(&output_reshaped);
