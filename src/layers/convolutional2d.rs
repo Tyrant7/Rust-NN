@@ -178,30 +178,27 @@ impl RawLayer for Convolutional2D {
 
         // Perform an im2col matrix multiplication on each input in the batch
         let mut input_matrix = Array2::zeros((k, p));
-        // let mut input_matrix_ptr = input_matrix.as_mut_ptr();
         for b in 0..batch_size {
             let mut patch_idx = 0;
 
             // We'll do the same thing for the input, but with dimensions (k, p)
             // where p represents each location where the kernel can overlap the image on all dimensions
-            // unsafe {
-                for out_y in 0..output_height {
-                    for out_x in 0..output_width {
-                        let mut i = 0;
-                        for c in 0..in_features {
-                            for ky in 0..kernel_height {
-                                for kx in 0..kernel_width {
-                                    let iy = out_y * self.stride.0 + ky;
-                                    let ix = out_x * self.stride.1 + kx;
-                                    input_matrix[[i, patch_idx]] = input[[b, c, iy, ix]];
-                                    i += 1;
-                                }
+            for out_y in 0..output_height {
+                for out_x in 0..output_width {
+                    let mut i = 0;
+                    for c in 0..in_features {
+                        for ky in 0..kernel_height {
+                            for kx in 0..kernel_width {
+                                let iy = out_y * self.stride.0 + ky;
+                                let ix = out_x * self.stride.1 + kx;
+                                input_matrix[[i, patch_idx]] = input[[b, c, iy, ix]];
+                                i += 1;
                             }
                         }
-                        patch_idx += 1;
                     }
+                    patch_idx += 1;
                 }
-            // }
+            }
 
             // Matrix multiply
             let output_matrix = kernel_matrix.dot(&input_matrix);
