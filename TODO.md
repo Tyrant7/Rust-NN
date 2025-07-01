@@ -2,8 +2,8 @@
 
 ## Currently working on:
 
--   Double check safety assertions throughout codebase, especially within layers
--   Format (but make sure not to reformat a lot of tests for clarity)
+-   Optimize conv layers even more (and rewrite benchmarks)
+-   "README" on GitHub explaining the library
 
 ## Next up:
 
@@ -40,7 +40,6 @@
 
 ## For publishing:
 
--   "README" on GitHub explaining the library
 -   Rename `main.rs` to `lib.rs` and do whatever else needs to be done to convert from
     an application to a library
 -   Move `examples/` directory to outside of `src/` and test everything works there
