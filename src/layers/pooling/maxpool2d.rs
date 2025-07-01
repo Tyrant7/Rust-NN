@@ -141,6 +141,7 @@ impl RawLayer for MaxPool2D {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::*;
 

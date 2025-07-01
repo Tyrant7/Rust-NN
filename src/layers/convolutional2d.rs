@@ -279,6 +279,7 @@ impl RawLayer for Convolutional2D {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::*;
 

@@ -101,6 +101,7 @@ impl RawLayer for Linear {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::*;
 
