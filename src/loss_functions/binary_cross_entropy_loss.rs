@@ -1,30 +1,30 @@
-use ndarray::{Array1, Array2, ArrayD, Axis};
 use super::LossFunction;
+use ndarray::{Array1, Array2, ArrayD, Axis};
 
-/// Binary Cross Entropy Loss (BCE). 
-/// 
-/// Commonly used for binary classification tasks (i.e. "yes or no" problems). 
-/// BCE is generally paired with a sigmoid activation function and expects 
-/// predicted probabilities in the range `[0, 1]`. 
-/// 
-/// BCE strongly penalizes confident incorrect predictions. 
-/// 
+/// Binary Cross Entropy Loss (BCE).
+///
+/// Commonly used for binary classification tasks (i.e. "yes or no" problems).
+/// BCE is generally paired with a sigmoid activation function and expects
+/// predicted probabilities in the range `[0, 1]`.
+///
+/// BCE strongly penalizes confident incorrect predictions.
+///
 /// The loss for a single data point is defined as:
-/// 
+///
 /// ```text
 /// -[y * ln(p) + (1 - y) * ln(1 - p)]
 /// ```
-/// 
-/// The derivative (used for backpropagation) is: 
-/// 
+///
+/// The derivative (used for backpropagation) is:
+///
 /// ```text
 /// -(y / p) + (1 - y) / (1 - p)
 /// ```
-/// 
-/// where: 
+///
+/// where:
 /// - `y` is the true label (0 or 1),
 /// - `p` is the predicted probability of the positive class (between 0 and 1).
-/// 
+///
 /// Inputs must be shaped as `(batch, width)`.
 pub struct BCELoss;
 

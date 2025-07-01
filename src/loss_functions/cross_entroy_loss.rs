@@ -1,30 +1,30 @@
-use ndarray::{Array1, Array2, Axis};
 use super::LossFunction;
+use ndarray::{Array1, Array2, Axis};
 
-/// Cross Entropy Loss with Logits (CEL). 
-/// 
-/// Used for multi-class classification tasks where the output is a distribution over classes. 
+/// Cross Entropy Loss with Logits (CEL).
+///
+/// Used for multi-class classification tasks where the output is a distribution over classes.
 /// This loss function expects **raw logits**, not probabilities. It applies the softmax function internally
-/// to improve numerical stability and efficiency. 
-/// 
-/// CEL penalizes confident incorrect predictions and is commonly used with softmax activations. 
-/// 
+/// to improve numerical stability and efficiency.
+///
+/// CEL penalizes confident incorrect predictions and is commonly used with softmax activations.
+///
 /// The formula for a single sample is defined as:
-/// 
+///
 /// ```text
 /// -target_y * ln(softmax_p)
 /// ```
-/// 
-/// where: 
-/// - `target_y` is a one-hot encoded vector containing the true label (0 or 1), 
+///
+/// where:
+/// - `target_y` is a one-hot encoded vector containing the true label (0 or 1),
 /// - `softmax_p` is a vector of predicted probabilities for each class computed via softmax over the logits.
-/// 
+///
 /// The simplified derivative (used for backpropagation) is:
-/// 
+///
 /// ```text
 /// softmax_p - target_y
 /// ```
-/// 
+///
 /// Inputs must be shaped as `(batch, num_classes)`.
 pub struct CrossEntropyWithLogitsLoss;
 

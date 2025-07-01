@@ -1,14 +1,17 @@
-use std::{fs::{remove_file, File}, io::{Read, Write}};
+use std::{
+    fs::{remove_file, File},
+    io::{Read, Write},
+};
 
-use serde::{ser::Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, ser::Serialize};
 
 /// Serializes a model's learned state (e.g. weights and biases) and writes it to a file at the given `path`.
-/// This does **not** include transient state such as cached forward input or temporary masks. 
-/// 
+/// This does **not** include transient state such as cached forward input or temporary masks.
+///
 /// # Errors
-/// Returns an `Err` if serialization or file writing fails. 
+/// Returns an `Err` if serialization or file writing fails.
 pub fn save_model_state<M>(model: &M, path: &str) -> std::io::Result<()>
-where 
+where
     M: Serialize,
 {
     let result = serde_json::to_string_pretty(model)?;
@@ -18,15 +21,15 @@ where
 }
 
 /// Deserializes a model's learned state from the file at `path`.
-/// 
+///
 /// # Returns
 /// The reconstructed model of type `M`.
-/// 
+///
 /// # Errors
-/// Returns an `Err` if reading or deserialization fails. 
+/// Returns an `Err` if reading or deserialization fails.
 pub fn load_model_state<M>(path: &str) -> std::io::Result<M>
-where 
-    M: DeserializeOwned
+where
+    M: DeserializeOwned,
 {
     let mut file = File::open(path)?;
     let mut contents = String::new();
@@ -39,7 +42,9 @@ where
 mod tests {
     use super::*;
     use crate::chain;
-    use crate::layers::{CompositeLayer, Tracked, Chain, Convolutional2D, Linear, ReLU, Flatten, MaxPool2D};
+    use crate::layers::{
+        Chain, CompositeLayer, Convolutional2D, Flatten, Linear, MaxPool2D, ReLU, Tracked,
+    };
     use ndarray::Array;
     use rand::distr::{Alphanumeric, SampleString};
     use rand::random;
@@ -73,17 +78,14 @@ mod tests {
         let save_path = Alphanumeric.sample_string(&mut rand::rng(), 20);
         let save_path = save_path.as_str();
 
-        save_model_state(&model, save_path)
-            .expect("Unable to save model state");
-        model = load_model_state(save_path)
-            .expect("Unable to load model state");
+        save_model_state(&model, save_path).expect("Unable to save model state");
+        model = load_model_state(save_path).expect("Unable to load model state");
 
         let loaded_state = serde_json::to_string_pretty(&model).unwrap();
 
         // Delete the temporary file
-        std::fs::remove_file(save_path)
-            .expect("Unable to remove temporary model file");
-        
+        std::fs::remove_file(save_path).expect("Unable to remove temporary model file");
+
         assert_eq!(original_state, loaded_state);
     }
 
@@ -117,17 +119,14 @@ mod tests {
         let save_path = Alphanumeric.sample_string(&mut rand::rng(), 20);
         let save_path = save_path.as_str();
 
-        save_model_state(&model, save_path)
-            .expect("Unable to save model state");
-        model = load_model_state(save_path)
-            .expect("Unable to load model state");
+        save_model_state(&model, save_path).expect("Unable to save model state");
+        model = load_model_state(save_path).expect("Unable to load model state");
 
         let loaded_output = model.forward(&data, false);
 
         // Delete the temporary file
-        std::fs::remove_file(save_path)
-            .expect("Unable to remove temporary model file");
-        
+        std::fs::remove_file(save_path).expect("Unable to remove temporary model file");
+
         assert_eq!(original_output, loaded_output);
     }
 }

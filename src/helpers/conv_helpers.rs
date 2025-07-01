@@ -1,6 +1,9 @@
-use ndarray::{s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, ArrayView4, ArrayViewMut1, ArrayViewMut2};
+use ndarray::{
+    s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, ArrayView3, ArrayView4,
+    ArrayViewMut1, ArrayViewMut2,
+};
 
-/// Pads the given 1D array with `padding` zero on both sides and returns the result. Panics if padding is zero. 
+/// Pads the given 1D array with `padding` zero on both sides and returns the result. Panics if padding is zero.
 pub fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     assert!(padding > 0);
 
@@ -11,14 +14,19 @@ pub fn pad_1d(input: &ArrayView1<f32>, padding: usize) -> Array1<f32> {
     padded
 }
 
-/// Performs a 1D convolution between `input` and `kernel` with the given `stride`, writing the result into the `output` buffer. 
-/// 
+/// Performs a 1D convolution between `input` and `kernel` with the given `stride`, writing the result into the `output` buffer.
+///
 /// `input` should be larger than `kernel`. `stride` defines the step size of the sliding window.
-/// For performance reasons, the result is written directly into the `output` buffer, which must be pre-allocated with the correct shape. 
-pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output: &mut ArrayViewMut1<f32>, stride: usize) {
+/// For performance reasons, the result is written directly into the `output` buffer, which must be pre-allocated with the correct shape.
+pub fn convolve1d(
+    input: ArrayView1<f32>,
+    kernel: ArrayView1<f32>,
+    output: &mut ArrayViewMut1<f32>,
+    stride: usize,
+) {
     let i_w = input.dim();
     let k_w = kernel.dim();
-    
+
     let output_w = (i_w - k_w) / stride + 1;
     for out in 0..output_w {
         let mut acc = 0.0;
@@ -30,33 +38,39 @@ pub fn convolve1d(input: ArrayView1<f32>, kernel: ArrayView1<f32>, output: &mut 
     }
 }
 
-/// Crops the given 1D array by removing `crop` total values, split as evenly as possible. 
+/// Crops the given 1D array by removing `crop` total values, split as evenly as possible.
 /// For odd values of `crop`, the right side will lose one more element than the left.  
-/// Returns the newly cropped array. 
+/// Returns the newly cropped array.
 pub fn crop_1d(input: &ArrayView1<f32>, crop: usize) -> Array1<f32> {
     let left = crop / 2;
     let right = crop - left;
     input.slice(s![left..input.dim() - right]).to_owned()
 }
 
-/// Pads the given 2D array with `padding` zero values on both sides of each dimension and returns the result. 
-/// `padding` should be given in order of dimension. 
+/// Pads the given 2D array with `padding` zero values on both sides of each dimension and returns the result.
+/// `padding` should be given in order of dimension.
 pub fn pad_2d(input: &ArrayView2<f32>, padding: (usize, usize)) -> Array2<f32> {
     let dim = input.dim();
-    let mut padded = Array2::zeros(
-        (dim.0 + padding.0 * 2, dim.1 + padding.1 * 2)
-    );
-    padded.slice_mut(
-        s![(padding.0)..dim.0 + padding.0, (padding.1)..dim.1 + padding.1]
-    ).assign(input);
+    let mut padded = Array2::zeros((dim.0 + padding.0 * 2, dim.1 + padding.1 * 2));
+    padded
+        .slice_mut(s![
+            (padding.0)..dim.0 + padding.0,
+            (padding.1)..dim.1 + padding.1
+        ])
+        .assign(input);
     padded
 }
 
-/// Performs a 2D convolution between `input` and `kernel` with the given `stride`, writing the result into the `output` buffer. 
-/// 
-/// `input` should be larger than `kernel`. `stride` defines the step size of the sliding window. 
-/// For performance reasons, the result is written directly into the `output` buffer, which must be pre-allocated with the correct shape. 
-pub fn convolve2d(input: &ArrayView2<f32>, kernel: &ArrayView2<f32>, output: &mut ArrayViewMut2<f32>, stride: (usize, usize)) {
+/// Performs a 2D convolution between `input` and `kernel` with the given `stride`, writing the result into the `output` buffer.
+///
+/// `input` should be larger than `kernel`. `stride` defines the step size of the sliding window.
+/// For performance reasons, the result is written directly into the `output` buffer, which must be pre-allocated with the correct shape.
+pub fn convolve2d(
+    input: &ArrayView2<f32>,
+    kernel: &ArrayView2<f32>,
+    output: &mut ArrayViewMut2<f32>,
+    stride: (usize, usize),
+) {
     let (k_h, k_w) = kernel.dim();
     let (s_y, s_x) = stride;
     let (i_h, i_w) = input.dim();
@@ -94,44 +108,53 @@ pub fn convolve2d(input: &ArrayView2<f32>, kernel: &ArrayView2<f32>, output: &mu
                     }
                 }
 
-                let o_offset = (out_y as isize) * output_stride_y + (out_x as isize) * output_stride_x;
+                let o_offset =
+                    (out_y as isize) * output_stride_y + (out_x as isize) * output_stride_x;
                 *output_ptr.offset(o_offset) += acc;
             }
         }
     }
 }
 
-/// Crops the given 2D array by removing `crop` total values for each dimension, split as evenly as possible. 
-/// `crop` should be given in order of dimensions. 
+/// Crops the given 2D array by removing `crop` total values for each dimension, split as evenly as possible.
+/// `crop` should be given in order of dimensions.
 /// For odd values within `crop`, the higher index side will lose one more element than the lower
-/// (e.g. a crop of `(1, 0)` on `[[0., 1.,], [2., 3.,]]` would result in `[[0., 1.,]]`). 
-/// Returns the newly cropped array. 
+/// (e.g. a crop of `(1, 0)` on `[[0., 1.,], [2., 3.,]]` would result in `[[0., 1.,]]`).
+/// Returns the newly cropped array.
 pub fn crop_2d(input: &ArrayView2<f32>, crop: (usize, usize)) -> Array2<f32> {
     let dim = input.dim();
     let bottom = crop.0 / 2;
     let top = crop.0 - bottom;
     let left = crop.1 / 2;
     let right = crop.1 - left;
-    input.slice(s![bottom..dim.0 - top, left..dim.1 - right]).to_owned()
+    input
+        .slice(s![bottom..dim.0 - top, left..dim.1 - right])
+        .to_owned()
 }
 
-/// Pads the given 3D array with `padding` zero values on both sides of each dimension and returns the result. 
-/// `padding` should be given in order of dimension. 
+/// Pads the given 3D array with `padding` zero values on both sides of each dimension and returns the result.
+/// `padding` should be given in order of dimension.
 pub fn pad_3d(input: &ArrayView3<f32>, padding: (usize, usize, usize)) -> Array3<f32> {
     let dim = input.dim();
-    let mut padded = Array3::zeros(
-        (dim.0 + padding.0 * 2, dim.1 + padding.1 * 2, dim.2 + padding.2 * 2)
-    );
-    padded.slice_mut(
-        s![(padding.0)..dim.0 + padding.0, (padding.1)..dim.1 + padding.1, (padding.2)..dim.2 + padding.2]
-    ).assign(input);
+    let mut padded = Array3::zeros((
+        dim.0 + padding.0 * 2,
+        dim.1 + padding.1 * 2,
+        dim.2 + padding.2 * 2,
+    ));
+    padded
+        .slice_mut(s![
+            (padding.0)..dim.0 + padding.0,
+            (padding.1)..dim.1 + padding.1,
+            (padding.2)..dim.2 + padding.2
+        ])
+        .assign(input);
     padded
 }
 
-/// Crops the given 3D array by removing `crop` total values for each dimension, split as evenly as possible. 
-/// `crop` should be given in order of dimensions. 
+/// Crops the given 3D array by removing `crop` total values for each dimension, split as evenly as possible.
+/// `crop` should be given in order of dimensions.
 /// For odd values within `crop`, the higher index side will lose one more element than the lower
-/// Returns the newly cropped array. 
+/// Returns the newly cropped array.
 pub fn crop_3d(input: &ArrayView3<f32>, crop: (usize, usize, usize)) -> Array3<f32> {
     let dim = input.dim();
     let bottom = crop.0 / 2;
@@ -140,26 +163,40 @@ pub fn crop_3d(input: &ArrayView3<f32>, crop: (usize, usize, usize)) -> Array3<f
     let right = crop.1 - left;
     let front = crop.2 / 2;
     let back = crop.2 - front;
-    input.slice(s![bottom..dim.0 - top, left..dim.1 - right, front..dim.2 - back]).to_owned()
+    input
+        .slice(s![
+            bottom..dim.0 - top,
+            left..dim.1 - right,
+            front..dim.2 - back
+        ])
+        .to_owned()
 }
 
-/// Pads the given 4D array with `padding` zero values on both sides of each dimension and returns the result. 
-/// `padding` should be given in order of dimension. 
+/// Pads the given 4D array with `padding` zero values on both sides of each dimension and returns the result.
+/// `padding` should be given in order of dimension.
 pub fn pad_4d(input: &ArrayView4<f32>, padding: (usize, usize, usize, usize)) -> Array4<f32> {
     let dim = input.dim();
-    let mut padded = Array4::zeros(
-        (dim.0 + padding.0 * 2, dim.1 + padding.1 * 2, dim.2 + padding.2 * 2, dim.3 + padding.3 * 2)
-    );
-    padded.slice_mut(
-        s![(padding.0)..dim.0 + padding.0, (padding.1)..dim.1 + padding.1, (padding.2)..dim.2 + padding.2, (padding.3)..dim.3 + padding.3]
-    ).assign(input);
+    let mut padded = Array4::zeros((
+        dim.0 + padding.0 * 2,
+        dim.1 + padding.1 * 2,
+        dim.2 + padding.2 * 2,
+        dim.3 + padding.3 * 2,
+    ));
+    padded
+        .slice_mut(s![
+            (padding.0)..dim.0 + padding.0,
+            (padding.1)..dim.1 + padding.1,
+            (padding.2)..dim.2 + padding.2,
+            (padding.3)..dim.3 + padding.3
+        ])
+        .assign(input);
     padded
 }
 
-/// Crops the given 4D array by removing `crop` total values for each dimension, split as evenly as possible. 
-/// `crop` should be given in order of dimensions. 
+/// Crops the given 4D array by removing `crop` total values for each dimension, split as evenly as possible.
+/// `crop` should be given in order of dimensions.
 /// For odd values within `crop`, the higher index side will lose one more element than the lower
-/// Returns the newly cropped array. 
+/// Returns the newly cropped array.
 pub fn crop_4d(input: &ArrayView4<f32>, crop: (usize, usize, usize, usize)) -> Array4<f32> {
     let dim = input.dim();
     let bottom = crop.0 / 2;
@@ -170,5 +207,12 @@ pub fn crop_4d(input: &ArrayView4<f32>, crop: (usize, usize, usize, usize)) -> A
     let back = crop.2 - front;
     let ana = crop.3 / 2;
     let kata = crop.3 - ana;
-    input.slice(s![bottom..dim.0 - top, left..dim.1 - right, front..dim.2 - back, ana..dim.3 - kata]).to_owned()
+    input
+        .slice(s![
+            bottom..dim.0 - top,
+            left..dim.1 - right,
+            front..dim.2 - back,
+            ana..dim.3 - kata
+        ])
+        .to_owned()
 }

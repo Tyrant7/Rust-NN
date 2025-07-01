@@ -1,36 +1,39 @@
-use rand::Rng;
 use ndarray::{s, Array1, Array2, Array3, ArrayView1, Axis, Ix1, Ix2, Ix3, Ix4};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::{helpers::conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d}, helpers::initialize_weights::{kaiming_normal, SeedMode}};
+use crate::{
+    helpers::conv_helpers::{convolve1d, crop_3d, pad_1d, pad_3d},
+    helpers::initialize_weights::{kaiming_normal, SeedMode},
+};
 
-use super::{RawLayer, LearnableParameter, ParameterGroup};
+use super::{LearnableParameter, ParameterGroup, RawLayer};
 
-/// A convolutional layer that handles 1D spatial data. 
-/// 
+/// A convolutional layer that handles 1D spatial data.
+///
 /// Convolutional layers are widely used in machine learning tasks involving spatial or temporal data, such
 /// as images, audio, and text. They are well-suited for extracting local features by applying learnable kernels
-/// over input features with spatial relationships. 
-/// 
+/// over input features with spatial relationships.
+///
 /// The shape of the output is given as follows:
-/// 
+///
 /// ```text
 /// (batch_size, out_features, output_width)
 /// where
 /// output_width = floor((width - kernel_width + 2 * padding) / stride) + 1;
 /// ```
-/// 
+///
 /// Convolutions occur between each feature in the input, and the kernels of this convolutional layer, and then have a bias
 /// added to each output as follows:
-/// 
+///
 /// ```text
 /// for each batch:
 ///     for each output feature:
 ///         for each feature in the input:
-///             output[batch, output_feature, ..] = 
+///             output[batch, output_feature, ..] =
 ///                 convolve(input[batch, input_feature, ..], kernels[output_feature, input_feature, ..]) + bias[output_feature]
 /// ```
-/// 
+///
 /// - Input data shape: `(batch_size, features, width)`
 /// - Kernels shape: `(out_features, in_features, kernel_width)`
 /// - Bias shape: `(out_features)`
@@ -45,33 +48,43 @@ pub struct Convolutional1D {
 
 impl Convolutional1D {
     /// Initializes a new [`Convolutional1D`] layer with random kernels of the given shape and zero bias (if enabled) using the Kaiming Normal initialization.  
-    /// 
-    /// This is the standard way to initialize a convolutional layer for training. 
-    /// 
+    ///
+    /// This is the standard way to initialize a convolutional layer for training.
+    ///
     /// # Arguments
-    /// - `in_features`: Number of input features. 
-    /// - `out_features`: Number of output features. 
-    /// - `kernel_width`: The width of each kernel. 
-    /// - `use_bias`: Whether or not bias should be added to each output. 
-    /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
-    /// - `padding`: The padding to add to either side of the input before convolutions are performed. 
-    /// 
+    /// - `in_features`: Number of input features.
+    /// - `out_features`: Number of output features.
+    /// - `kernel_width`: The width of each kernel.
+    /// - `use_bias`: Whether or not bias should be added to each output.
+    /// - `stride`: The stride to use during the convolutions between the kernels and input features.
+    /// - `padding`: The padding to add to either side of the input before convolutions are performed.
+    ///
     /// # Panics
     /// - If any of `in_features`, `out_features`, or `kernel_width` are zero.  
     /// - If `stride` is zero.
     pub fn new_from_rand(
-        in_features: usize, 
-        out_features: usize, 
-        kernel_width: usize, 
+        in_features: usize,
+        out_features: usize,
+        kernel_width: usize,
         use_bias: bool,
-        stride: usize, 
+        stride: usize,
         padding: usize,
     ) -> Self {
-        assert!(in_features > 0, "Invalid input feature count: {in_features}");
-        assert!(out_features > 0, "Invalid output feature count: {out_features}");
+        assert!(
+            in_features > 0,
+            "Invalid input feature count: {in_features}"
+        );
+        assert!(
+            out_features > 0,
+            "Invalid output feature count: {out_features}"
+        );
         assert!(kernel_width > 0, "Invalid kernel width: {kernel_width}");
 
-        let kernels = kaiming_normal((out_features, in_features, kernel_width), 1, SeedMode::Random);
+        let kernels = kaiming_normal(
+            (out_features, in_features, kernel_width),
+            1,
+            SeedMode::Random,
+        );
         let bias = match use_bias {
             true => Some(Array1::zeros(out_features)),
             false => None,
@@ -80,34 +93,39 @@ impl Convolutional1D {
     }
 
     /// Initializes a new [`Convolutional1D`] layer with given kernels and bias (if enabled).  
-    /// 
+    ///
     /// # Parameters
     /// - `kernels`: The kernels to use for the convolution. Should have the shape `(out_features, in_features, kernel_width)`.
     /// - `bias`: The bias to add to each output feature. Should have the shape `(out_features)`.
-    /// - `stride`: The stride to use during the convolutions between the kernels and input features. 
-    /// - `padding`: The padding to add to either side of the input before convolutions are performed. 
-    /// 
+    /// - `stride`: The stride to use during the convolutions between the kernels and input features.
+    /// - `padding`: The padding to add to either side of the input before convolutions are performed.
+    ///
     /// # Panics
-    /// - If `bias` and `kernels` do not share the same number of input features when bias exists (first dimension length). 
+    /// - If `bias` and `kernels` do not share the same number of input features when bias exists (first dimension length).
     /// - If `stride` is zero.
     pub fn new_from_kernels(
-        kernels: Array3<f32>, 
+        kernels: Array3<f32>,
         bias: Option<Array1<f32>>,
-        stride: usize, 
+        stride: usize,
         padding: usize,
     ) -> Self {
         assert!(stride > 0, "Invalid stride given: {stride}");
         if let Some(b) = &bias {
-            assert!(b.dim() == kernels.dim().0, "Shape mismatch between kernels and bias: {:?}, {:?}", kernels.dim(), b.dim());
+            assert!(
+                b.dim() == kernels.dim().0,
+                "Shape mismatch between kernels and bias: {:?}, {:?}",
+                kernels.dim(),
+                b.dim()
+            );
         }
 
         let kernels = ParameterGroup::new(kernels);
         let bias = bias.map(ParameterGroup::new);
-        Convolutional1D { 
-            kernels, 
-            bias, 
-            stride, 
-            padding 
+        Convolutional1D {
+            kernels,
+            bias,
+            stride,
+            padding,
         }
     }
 }
@@ -115,7 +133,7 @@ impl Convolutional1D {
 impl RawLayer for Convolutional1D {
     type Input = Ix3;
     type Output = Ix3;
-    
+
     // Expected input shape: (batch_size, features, width)
     fn forward(&mut self, input: &Array3<f32>, _train: bool) -> Array3<f32> {
         let (batch_size, in_features, width) = input.dim();
@@ -127,36 +145,37 @@ impl RawLayer for Convolutional1D {
         // 1D convolution
         let (out_features, _, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding)) / self.stride) + 1;
-        let mut batch_outputs = vec![Array2::<f32>::zeros((out_features, output_width)); batch_size];
+        let mut batch_outputs =
+            vec![Array2::<f32>::zeros((out_features, output_width)); batch_size];
 
         batch_outputs
             .iter_mut()
             .enumerate()
             .for_each(|(b, batch_output)| {
-            for out_f in 0..out_features {
-                for in_f in 0..in_features {
-                    let input_slice = input.slice(s![b, in_f, ..]);
-                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
-                    convolve1d(
-                        input_slice, 
-                        kernel_slice, 
-                        &mut batch_output
-                            .slice_mut(s![out_f, ..]), 
-                        self.stride);
+                for out_f in 0..out_features {
+                    for in_f in 0..in_features {
+                        let input_slice = input.slice(s![b, in_f, ..]);
+                        let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..]);
+                        convolve1d(
+                            input_slice,
+                            kernel_slice,
+                            &mut batch_output.slice_mut(s![out_f, ..]),
+                            self.stride,
+                        );
+                    }
                 }
-            }
-        });
+            });
 
         let mut output = Array3::<f32>::zeros((batch_size, out_features, output_width));
         for (b, batch) in batch_outputs.into_iter().enumerate() {
-            output
-                .slice_mut(s![b, .., ..])
-                .assign(&batch);
+            output.slice_mut(s![b, .., ..]).assign(&batch);
         }
 
         // Apply bias to the second dimension (features)
         if let Some(b) = &self.bias {
-            output += &b.values.view()
+            output += &b
+                .values
+                .view()
                 .insert_axis(Axis(0))
                 .insert_axis(Axis(2))
                 .broadcast(output.dim())
@@ -180,67 +199,62 @@ impl RawLayer for Convolutional1D {
         } else {
             vec![None; batch_size]
         };
-        
+
         batch_signals
             .iter_mut()
             .zip(kernel_grads.iter_mut())
             .zip(bias_grads.iter_mut())
             .enumerate()
             .for_each(|(b, ((batch_signal, kernel_grad), bias_grad))| {
-            for out_f in 0..out_features {
-                for in_f in 0..in_features {
-                    // Kernel gradients
-                    // Align error slice with input slice
-                    let input_slice = forward_input.slice(s![b, in_f, ..]);
-                    let error_slice = delta.slice(s![b, out_f, ..]);
+                for out_f in 0..out_features {
+                    for in_f in 0..in_features {
+                        // Kernel gradients
+                        // Align error slice with input slice
+                        let input_slice = forward_input.slice(s![b, in_f, ..]);
+                        let error_slice = delta.slice(s![b, out_f, ..]);
 
-                    // In some cases, the loss may actually be larger than the input due to padding
-                    // In these cases, we can swap the kernel and input to achieve the desired result
-                    // without causing a shape error
-                    if error_slice.dim() < input_slice.dim() {
+                        // In some cases, the loss may actually be larger than the input due to padding
+                        // In these cases, we can swap the kernel and input to achieve the desired result
+                        // without causing a shape error
+                        if error_slice.dim() < input_slice.dim() {
+                            convolve1d(
+                                input_slice,
+                                error_slice,
+                                &mut kernel_grad.slice_mut(s![out_f, in_f, ..]),
+                                1,
+                            );
+                        } else {
+                            convolve1d(
+                                error_slice,
+                                input_slice,
+                                &mut kernel_grad.slice_mut(s![out_f, in_f, ..]),
+                                1,
+                            );
+                        };
+
+                        // Error signal
+                        // Flip over width dimension (180 rotation)
+                        let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
+                        let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
                         convolve1d(
-                            input_slice, 
-                            error_slice, 
-                            &mut kernel_grad
-                                .slice_mut(s![out_f, in_f, ..]), 
-                            1
+                            padded.view(),
+                            kernel_slice,
+                            &mut batch_signal.slice_mut(s![in_f, ..]),
+                            1,
                         );
-                    } else {
-                        convolve1d(
-                            error_slice,
-                            input_slice,
-                            &mut kernel_grad
-                                .slice_mut(s![out_f, in_f, ..]),
-                            1
-                        );
-                    };
+                    }
 
-                    // Error signal
-                    // Flip over width dimension (180 rotation)
-                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1]);
-                    let padded = pad_1d(&error_slice, kernel_slice.dim() - 1);
-                    convolve1d(
-                        padded.view(),
-                        kernel_slice,
-                        &mut batch_signal
-                            .slice_mut(s![in_f, ..]),
-                        1
-                    );
+                    // Compute bias gradients
+                    if let Some(bias) = &mut *bias_grad {
+                        bias[out_f] += delta.slice(s![b, out_f, ..]).sum();
+                    }
                 }
-
-                // Compute bias gradients
-                if let Some(bias) = &mut *bias_grad { 
-                    bias[out_f] += delta.slice(s![b, out_f, ..]).sum();
-                }
-            }
-        });
+            });
 
         // Collect full signals
         let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
         for (b, batch) in batch_signals.into_iter().enumerate() {
-            error_signal
-                .slice_mut(s![b, .., ..])
-                .assign(&batch);
+            error_signal.slice_mut(s![b, .., ..]).assign(&batch);
         }
         for grad in kernel_grads.into_iter() {
             self.kernels.gradients += &grad;
@@ -252,7 +266,7 @@ impl RawLayer for Convolutional1D {
         }
 
         // We need to crop the error signal to account for the padding added during the forward pass.
-        // In the case padding was added there will be extra error values mapping to those positions, 
+        // In the case padding was added there will be extra error values mapping to those positions,
         // however they are not important for calculating the previous layer's error since they were
         // added to the data by this layer during the forward pass
         crop_3d(&error_signal.view(), (0, 0, signal_width - input_width))

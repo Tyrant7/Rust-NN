@@ -1,25 +1,28 @@
 use ndarray::{s, Array3, Axis, Ix3};
 use serde::{Deserialize, Serialize};
 
-use crate::{helpers::conv_helpers::{crop_3d, pad_3d}, layers::{ParameterGroup, RawLayer}};
+use crate::{
+    helpers::conv_helpers::{crop_3d, pad_3d},
+    layers::{ParameterGroup, RawLayer},
+};
 
-/// A layer that performs 1D max pooling over spatial or temporal data. 
-/// 
+/// A layer that performs 1D max pooling over spatial or temporal data.
+///
 /// Pooling layers are widely used in machine learning tasks involving spatial or temporal data, such
 /// as images, audio and text. They are well-suited for reducing the size and complexity of spatial dimensions
-/// while retaining important information about the data's spatial relationships. 
-/// 
-/// Expects input in the shape: `(batch_size, features, width)`, and 
+/// while retaining important information about the data's spatial relationships.
+///
+/// Expects input in the shape: `(batch_size, features, width)`, and
 /// the shape of the output is given as follows:
-/// 
+///
 /// ```text
 /// (batch_size, out_features, output_width)
 /// where
 /// output_width = floor((width - kernel_width + (2 * padding)) / stride) + 1;
 /// ```
-/// 
+///
 /// Max pooling occurs over each feature in the input. It works by sliding a kernel over the input by `stride` steps,
-/// and reducing each set of overlapping data to the highest value currently overlapping the kernel. 
+/// and reducing each set of overlapping data to the highest value currently overlapping the kernel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MaxPool1D {
     kernel_width: usize,
@@ -27,48 +30,44 @@ pub struct MaxPool1D {
     padding: usize,
 
     /// Stores the indices of maximum elements selected during the forward pass
-    /// for each window position. Used to route gradients in `backward`. 
+    /// for each window position. Used to route gradients in `backward`.
     #[serde(skip)]
-    max_indices: Option<Array3<usize>>
+    max_indices: Option<Array3<usize>>,
 }
 
 impl MaxPool1D {
-    /// Initializes a new [`MaxPool1D`] layer with the given parameters. 
-    /// 
+    /// Initializes a new [`MaxPool1D`] layer with the given parameters.
+    ///
     /// # Arguments
-    /// - `kernel_width`: The width of the sliding window during pooling. 
-    /// - `stride`: The step size of the sliding window during pooling. 
-    /// - `padding`: The padding to add to either side of the input before pooling is performed. 
-    /// 
+    /// - `kernel_width`: The width of the sliding window during pooling.
+    /// - `stride`: The step size of the sliding window during pooling.
+    /// - `padding`: The padding to add to either side of the input before pooling is performed.
+    ///
     /// # Panics
-    /// - If `kernel_width` is zero. 
-    /// - If `stride` is zero. 
-    fn new_full(
-        kernel_width: usize,
-        stride: usize,
-        padding: usize,
-    ) -> Self {
+    /// - If `kernel_width` is zero.
+    /// - If `stride` is zero.
+    fn new_full(kernel_width: usize, stride: usize, padding: usize) -> Self {
         assert!(kernel_width > 0, "Invalid kernel width: {kernel_width}");
         assert!(stride > 0, "Invalid stride given: {stride}");
-        MaxPool1D { 
-            kernel_width, 
-            stride, 
-            padding, 
+        MaxPool1D {
+            kernel_width,
+            stride,
+            padding,
             max_indices: None,
         }
     }
 
-    /// Initializes a new [`MaxPool1D`] layer with the given `kernel_width`. This uses a stride equal to `kernel_width`, 
-    /// and no padding. 
-    /// 
-    /// For more control over stride and padding, use [`MaxPool1D::new_full`]. 
-    /// 
+    /// Initializes a new [`MaxPool1D`] layer with the given `kernel_width`. This uses a stride equal to `kernel_width`,
+    /// and no padding.
+    ///
+    /// For more control over stride and padding, use [`MaxPool1D::new_full`].
+    ///
     /// # Arguments
-    /// - `kernel_width`: The width of the sliding window during pooling. 
-    /// 
+    /// - `kernel_width`: The width of the sliding window during pooling.
+    ///
     /// # Panics
-    /// - If `kernel_width` is zero. 
-    /// - If `stride` is zero. 
+    /// - If `kernel_width` is zero.
+    /// - If `stride` is zero.
     fn new(kernel_width: usize) -> Self {
         Self::new_full(kernel_width, kernel_width, 0)
     }
@@ -96,7 +95,8 @@ impl RawLayer for MaxPool1D {
                 let input_slice = input.slice(s![b, in_f, ..]);
                 let windows = input_slice.windows_with_stride(self.kernel_width, self.stride);
                 for (i, window) in windows.into_iter().enumerate() {
-                    let (max_idx, max_val) = window.iter()
+                    let (max_idx, max_val) = window
+                        .iter()
                         .enumerate()
                         .max_by(|&(_, a), &(_, b)| a.partial_cmp(b).unwrap())
                         .unwrap();
@@ -116,7 +116,8 @@ impl RawLayer for MaxPool1D {
 
         let signal_width = (error_width - 1) * self.stride + self.kernel_width;
         let mut error_signal = Array3::zeros((batch_size, in_features, signal_width));
-        let max_indices = self.max_indices
+        let max_indices = self
+            .max_indices
             .as_ref()
             .expect("No indices stored during forward pass or forward pass never called!");
         let (_, _, indices_width) = max_indices.dim();

@@ -10,7 +10,6 @@ use ndarray::{s, Array1, Array3};
 use crate::chain;
 use crate::graphs;
 use crate::layers::Chain;
-use crate::layers::Tracked;
 use crate::layers::CompositeLayer;
 use crate::layers::Convolutional1D;
 use crate::layers::Convolutional2D;
@@ -18,6 +17,7 @@ use crate::layers::Flatten;
 use crate::layers::Linear;
 use crate::layers::MaxPool2D;
 use crate::layers::ReLU;
+use crate::layers::Tracked;
 
 use crate::layers::Sigmoid;
 use crate::loss_functions::LossFunction;
@@ -59,38 +59,53 @@ pub fn run() {
     let batch_size = 50;
     let samples = train_data.shape()[0];
 
-    assert!(samples % batch_size == 0, "TODO: Fill empty space with zeroes. For now will error");
+    assert!(
+        samples % batch_size == 0,
+        "TODO: Fill empty space with zeroes. For now will error"
+    );
     let num_batches = samples / batch_size;
 
-    let new_shape = (num_batches, batch_size, train_data.shape()[1], train_data.shape()[2]);
+    let new_shape = (
+        num_batches,
+        batch_size,
+        train_data.shape()[1],
+        train_data.shape()[2],
+    );
     let new_label_shape = (num_batches, batch_size);
 
     let reshaped_train = train_data.to_shape(new_shape).unwrap();
     let reshaped_labels = train_labels.to_shape(new_label_shape).unwrap();
 
-    benchmark(&mut |i| {
-        println!("Iteration {i}");
+    benchmark(
+        &mut |i| {
+            println!("Iteration {i}");
 
-        // Only do 10 batches for sampling
-        for (x, labels) in reshaped_train.axis_iter(Axis(0)).zip(reshaped_labels.axis_iter(Axis(0))).take(10) {
-            let mut label_encoded = Array2::<f32>::zeros((batch_size, 10));
-            for (i, &label) in labels.iter().enumerate() {
-                label_encoded[[i, label as usize]] = 1.;
+            // Only do 10 batches for sampling
+            for (x, labels) in reshaped_train
+                .axis_iter(Axis(0))
+                .zip(reshaped_labels.axis_iter(Axis(0)))
+                .take(10)
+            {
+                let mut label_encoded = Array2::<f32>::zeros((batch_size, 10));
+                for (i, &label) in labels.iter().enumerate() {
+                    label_encoded[[i, label as usize]] = 1.;
+                }
+
+                // go from shape (28, 28) to (batch, 1, 28, 28)
+                let expanded = x.insert_axis(Axis(1));
+                let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
+
+                let pred = network.forward(&expanded_f32, true);
+                network.backward(&MSELoss::derivative(&pred, &label_encoded));
             }
-
-            // go from shape (28, 28) to (batch, 1, 28, 28)
-            let expanded = x.insert_axis(Axis(1));
-            let expanded_f32 = expanded.map(|v| *v as f32 / 255.);
-
-            let pred = network.forward(&expanded_f32, true);
-            network.backward(&MSELoss::derivative(&pred, &label_encoded));
-        }
-    }, 10, "forward + backward 10 batches");
+        },
+        10,
+        "forward + backward 10 batches",
+    );
 }
 
 fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
-    let contents = fs::read(data_path)
-        .expect("Should have been able to read the file");
+    let contents = fs::read(data_path).expect("Should have been able to read the file");
     let mut contents = contents.into_iter();
 
     // Explanation derived from: https://medium.com/theconsole/do-you-really-know-how-mnist-is-stored-600d69455937
@@ -119,10 +134,13 @@ fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
     // The sizes for dimensions are 32 bit integers in big endian format
 
     let zero_bytes = (
-        contents.next().expect("Missing file metadata"), 
-        contents.next().expect("Missing file metadata")
+        contents.next().expect("Missing file metadata"),
+        contents.next().expect("Missing file metadata"),
     );
-    assert!(zero_bytes.0 == 0 && zero_bytes.1 == 0, "First 2 bytes in file should be zero");
+    assert!(
+        zero_bytes.0 == 0 && zero_bytes.1 == 0,
+        "First 2 bytes in file should be zero"
+    );
 
     let datatype = contents.next().expect("File missing datatype");
     assert!(datatype == 0x08, "datatype should be u8 for MNIST");
@@ -142,19 +160,20 @@ fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
 
     let images = Array3::from_shape_vec((dims[0], dims[1], dims[2]), contents.collect())
         .expect("Shape mismatch");
-    
-    
+
     // Read back labels too
-    
-    let contents = fs::read(labels_path)
-        .expect("Should have been able to read the file");
+
+    let contents = fs::read(labels_path).expect("Should have been able to read the file");
     let mut contents = contents.into_iter();
 
     let zero_bytes = (
-        contents.next().expect("Missing file metadata"), 
-        contents.next().expect("Missing file metadata")
+        contents.next().expect("Missing file metadata"),
+        contents.next().expect("Missing file metadata"),
     );
-    assert!(zero_bytes.0 == 0 && zero_bytes.1 == 0, "First 2 bytes in file should be zero");
+    assert!(
+        zero_bytes.0 == 0 && zero_bytes.1 == 0,
+        "First 2 bytes in file should be zero"
+    );
 
     let datatype = contents.next().expect("File missing datatype");
     assert!(datatype == 0x08, "datatype should be u8 for MNIST labels");
@@ -167,8 +186,7 @@ fn read_data(data_path: &str, labels_path: &str) -> (Array3<u8>, Array1<u8>) {
         .collect::<Vec<u8>>();
     let dim = i32::from_be_bytes(dim_bytes[0..4].try_into().unwrap()) as usize;
 
-    let labels = Array1::from_shape_vec(dim, contents.collect())
-        .expect("Shape mismatch");
-    
+    let labels = Array1::from_shape_vec(dim, contents.collect()).expect("Shape mismatch");
+
     (images, labels)
 }

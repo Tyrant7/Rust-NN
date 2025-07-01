@@ -3,27 +3,27 @@ use serde::{Deserialize, Serialize};
 
 use crate::layers::RawLayer;
 
-/// The Rectified Linear Unit (ReLU) activation function. 
-/// 
+/// The Rectified Linear Unit (ReLU) activation function.
+///
 /// ReLU is one of the most widely used activation functions in deep learning, particularly in hidden layers.
-/// It outputs the input value if positive, and zero otherwise, introducing non-linearity while being computationally efficient. 
-/// 
-/// ReLU maps inputs to the range `[0, ∞)` and helps mitigate the vanishing gradietn problem that affects `sigmoid` and `tanh` activations. 
-/// 
+/// It outputs the input value if positive, and zero otherwise, introducing non-linearity while being computationally efficient.
+///
+/// ReLU maps inputs to the range `[0, ∞)` and helps mitigate the vanishing gradietn problem that affects `sigmoid` and `tanh` activations.
+///
 /// The formula for the ReLU function is:
 /// ```text
 /// σ(x) = max(0, x)
 /// ```
-/// 
+///
 /// # Notes
-/// - Derivative: 
+/// - Derivative:
 /// ```text
 /// σ'(x) = {
 ///     1 if x > 0
 ///     0 if x ≤ 0
 /// }
 /// ```
-/// - ReLU is not differentiable at `x = 0`, but in practice, the subgradient `0` or `1` is used during training. 
+/// - ReLU is not differentiable at `x = 0`, but in practice, the subgradient `0` or `1` is used during training.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReLU;
 
@@ -49,11 +49,12 @@ mod tests {
 
     #[test]
     fn relu() {
-        test_activation_fn(ReLU, 
-            vec![-1., 0., 1.,],
-            vec![0., 0., 1.,],
-            vec![-1., 0., 1.,],
-            vec![0., 0., 1.,]
+        test_activation_fn(
+            ReLU,
+            vec![-1., 0., 1.],
+            vec![0., 0., 1.],
+            vec![-1., 0., 1.],
+            vec![0., 0., 1.],
         );
     }
 }

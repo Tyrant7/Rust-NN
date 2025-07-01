@@ -29,9 +29,9 @@ pub fn costs_candle(
     chart.configure_mesh().light_line_style(WHITE).draw()?;
 
     /* chart
-        .configure_series_labels()
-        .border_style(&BLACK)
-        .draw()?; */
+    .configure_series_labels()
+    .border_style(&BLACK)
+    .draw()?; */
 
     chart
         .configure_mesh()
