@@ -118,7 +118,7 @@ pub fn convolve2d(
 
 /// Crops the given 2D array by removing `crop` total values for each dimension, split as evenly as possible.
 /// `crop` should be given in order of dimensions.
-/// For odd values within `crop`, the higher index side will lose one more element than the lower
+/// For odd values within `crop`, the higher index side will lose one more element than the lower. 
 /// (e.g. a crop of `(1, 0)` on `[[0., 1.,], [2., 3.,]]` would result in `[[0., 1.,]]`).
 /// Returns the newly cropped array.
 pub fn crop_2d(input: &ArrayView2<f32>, crop: (usize, usize)) -> Array2<f32> {
@@ -153,7 +153,7 @@ pub fn pad_3d(input: &ArrayView3<f32>, padding: (usize, usize, usize)) -> Array3
 
 /// Crops the given 3D array by removing `crop` total values for each dimension, split as evenly as possible.
 /// `crop` should be given in order of dimensions.
-/// For odd values within `crop`, the higher index side will lose one more element than the lower
+/// For odd values within `crop`, the higher index side will lose one more element than the lower. 
 /// Returns the newly cropped array.
 pub fn crop_3d(input: &ArrayView3<f32>, crop: (usize, usize, usize)) -> Array3<f32> {
     let dim = input.dim();
@@ -195,7 +195,7 @@ pub fn pad_4d(input: &ArrayView4<f32>, padding: (usize, usize, usize, usize)) ->
 
 /// Crops the given 4D array by removing `crop` total values for each dimension, split as evenly as possible.
 /// `crop` should be given in order of dimensions.
-/// For odd values within `crop`, the higher index side will lose one more element than the lower
+/// For odd values within `crop`, the higher index side will lose one more element than the lower. 
 /// Returns the newly cropped array.
 pub fn crop_4d(input: &ArrayView4<f32>, crop: (usize, usize, usize, usize)) -> Array4<f32> {
     let dim = input.dim();
