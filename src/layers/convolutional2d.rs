@@ -241,28 +241,20 @@ impl RawLayer for Convolutional2D {
 
         // Transform the kernels into a single matrix of dimensions (out_features, k)
         // to prepare for an im2col matrix multiplication
-        let mut kernel_matrix = Array2::zeros((out_features, k));
-        for out_f in 0..out_features {
-            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
-                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
-            );
-        }
+        let mut kernels = self.kernels.values.clone();
+        kernels.invert_axis(Axis(2));
+        kernels.invert_axis(Axis(3));
+        kernels.swap_axes(0, 1);
+        let kernel_matrix = kernels.to_shape((in_features, in_features * kernel_height * kernel_width)).unwrap();
 
         // Must use the padded shape of the input
-        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
+        let mut error_signal = Array4::zeros((batch_size, in_features, input_height, input_width));
+        let mut kernel_grads = Array2::zeros((out_features, in_features * kernel_height * kernel_width));
 
         // Perform an im2col matrix multiplication on each input in the batch
         for b in 0..batch_size {
+            // #2: Flatten image matrix
             let mut input_matrix = Array2::zeros((k, p));
-            let mut delta_matrix = Array2::zeros((out_features, p));
-            for out_f in 0..out_features {
-                delta_matrix.slice_mut(s![out_f, ..]).assign(
-                    &delta.slice(s![b, out_f, .., ..]).flatten()
-                );
-            }
-            
-            // We'll do the same thing for the input, but with dimensions (k, p)
-            // where p represents each location where the kernel can overlap the image on all dimensions
             let mut patch_idx = 0;
             for out_y in 0..output_height {
                 for out_x in 0..output_width {
@@ -281,15 +273,20 @@ impl RawLayer for Convolutional2D {
                 }
             }
 
-            // Kernel grads
-            let kernel_grad_matrix = delta_matrix.dot(&input_matrix.t());
-            let kernel_grads = kernel_grad_matrix
-                .into_shape_with_order((out_features, in_features, kernel_height, kernel_width))
+            // #3: Reshape delta into matrix
+            let delta_matrix = delta
+                .slice(s![b, .., .., ..])
+                .to_shape((out_features, p))
                 .unwrap();
-            self.kernels.gradients.slice_mut(s![.., .., .., ..]).scaled_add(1., &kernel_grads);
 
-            // Error signal
-            let error_signal_matrix = kernel_matrix.t().dot(&delta_matrix);
+            // println!("{:#?}", input_matrix);
+            // println!("{:#?}", delta_matrix);
+
+            // #4: Kernel grads
+            kernel_grads.scaled_add(1., &delta_matrix.dot(&input_matrix.t()));
+
+            // #5: Error signal
+            let error_signal_matrix = kernel_matrix.dot(&delta_matrix);
 
             // col2im
             let mut patch_idx = 0;
@@ -318,19 +315,27 @@ impl RawLayer for Convolutional2D {
             }
         }
 
-        // We need to crop the error signal to account for the padding added during the forward pass.
-        // In the case padding was added there will be extra error values mapping to those positions,
-        // however they are not important for calculating the previous layer's error since they were
-        // added to the data by this layer during the forward pass
-        crop_4d(
-            &error_signal.view(),
-            (
-                0,
-                0,
-                signal_height - input_height,
-                signal_width - input_width,
-            ),
-        )
+        self.kernels.gradients.scaled_add(1., 
+            &kernel_grads
+            .into_shape_with_order((out_features, in_features, kernel_height, kernel_width))
+            .unwrap()
+        );
+
+        error_signal
+
+        // // We need to crop the error signal to account for the padding added during the forward pass.
+        // // In the case padding was added there will be extra error values mapping to those positions,
+        // // however they are not important for calculating the previous layer's error since they were
+        // // added to the data by this layer during the forward pass
+        // crop_4d(
+        //     &error_signal.view(),
+        //     (
+        //         0,
+        //         0,
+        //         signal_height - input_height,
+        //         signal_width - input_width,
+        //     ),
+        // )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
