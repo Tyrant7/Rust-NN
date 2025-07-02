@@ -227,57 +227,91 @@ impl RawLayer for Convolutional2D {
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
         let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
+        let (_, _, output_height, output_width) = delta.dim();
 
-        let output_width =
-            ((input_width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
-        let output_height =
-            ((input_height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let signal_width = output_width + kernel_width - 1;
+        // Recreate the original forward input before convolving
+        let forward_input = pad_4d(&forward_input.view(), (0, 0, self.padding.0, self.padding.1));
+
         let signal_height = output_height + kernel_height - 1;
+        let signal_width = output_width + kernel_width - 1;
 
-        // Compute kernel gradients and error signal for backpropagation in a single step to save performance
-        let mut error_signal =
-            Array4::zeros((batch_size, in_features, signal_height, signal_width));
+        // The dimensions for our im2col matrices
+        let k = in_features * kernel_height * kernel_width;
+        let p = output_height * output_width;
+
+        // Transform the kernels into a single matrix of dimensions (out_features, k)
+        // to prepare for an im2col matrix multiplication
+        let mut kernel_matrix = Array2::zeros((out_features, k));
+        for out_f in 0..out_features {
+            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
+                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
+            );
+        }
+
+        // Must use the padded shape of the input
+        let mut error_signal = Array4::zeros((batch_size, in_features, signal_height, signal_width));
+
+        // Perform an im2col matrix multiplication on each input in the batch
         for b in 0..batch_size {
+            let mut input_matrix = Array2::zeros((k, p));
+            let mut delta_matrix = Array2::zeros((out_features, p));
             for out_f in 0..out_features {
-                for in_f in 0..in_features {
-                    // Kernel gradients
-                    // Align error slice with input slice
-                    let input_slice = forward_input.slice(s![b, in_f, .., ..]);
-                    let error_slice = delta.slice(s![b, out_f, .., ..]);
-
-                    // In some cases, the loss may actually be larger than the input due to padding
-                    // In these cases, we can swap the kernel and input to achieve the desired result
-                    // without causing a shape error
-                    if error_slice.dim() < input_slice.dim() {
-                        convolve2d(
-                            &input_slice,
-                            &error_slice,
-                            &mut self.kernels.gradients.slice_mut(s![out_f, in_f, .., ..]),
-                            (1, 1),
-                        );
-                    } else {
-                        convolve2d(
-                            &error_slice,
-                            &input_slice,
-                            &mut self.kernels.gradients.slice_mut(s![out_f, in_f, .., ..]),
-                            (1, 1),
-                        );
-                    };
-
-                    // Error signal
-                    // Flip over width and height dimensions (180 rotation)
-                    let kernel_slice = self.kernels.values.slice(s![out_f, in_f, ..;-1, ..;-1]);
-                    let padded = pad_2d(&error_slice, (kernel_height - 1, kernel_width - 1));
-                    convolve2d(
-                        &padded.view(),
-                        &kernel_slice,
-                        &mut error_signal.slice_mut(s![b, in_f, .., ..]),
-                        (1, 1),
-                    );
+                delta_matrix.slice_mut(s![out_f, ..]).assign(
+                    &delta.slice(s![b, out_f, .., ..]).flatten()
+                );
+            }
+            
+            // We'll do the same thing for the input, but with dimensions (k, p)
+            // where p represents each location where the kernel can overlap the image on all dimensions
+            let mut patch_idx = 0;
+            for out_y in 0..output_height {
+                for out_x in 0..output_width {
+                    let mut i = 0;
+                    for c in 0..in_features {
+                        for ky in 0..kernel_height {
+                            for kx in 0..kernel_width {
+                                let iy = out_y * self.stride.0 + ky;
+                                let ix = out_x * self.stride.1 + kx;
+                                input_matrix[[i, patch_idx]] = forward_input[[b, c, iy, ix]];
+                                i += 1;
+                            }
+                        }
+                    }
+                    patch_idx += 1;
                 }
+            }
 
-                // Compute bias gradients
+            // Kernel grads
+            let kernel_grad_matrix = delta_matrix.dot(&input_matrix.t());
+            let kernel_grads = kernel_grad_matrix
+                .into_shape_with_order((out_features, in_features, kernel_height, kernel_width))
+                .unwrap();
+            self.kernels.gradients.slice_mut(s![.., .., .., ..]).scaled_add(1., &kernel_grads);
+
+            // Error signal
+            let error_signal_matrix = kernel_matrix.t().dot(&delta_matrix);
+
+            // col2im
+            let mut patch_idx = 0;
+            for out_y in 0..output_height {
+                for out_x in 0..output_width {
+                    let mut i = 0;
+                    for c in 0..in_features {
+                        for ky in 0..kernel_height {
+                            for kx in 0..kernel_width {
+                                let iy = out_y + ky;
+                                let ix = out_x + kx;
+                                error_signal[[b, c, iy, ix]] += error_signal_matrix[[i, patch_idx]];
+                                i += 1;
+                            }
+                        }
+                    }
+                    patch_idx += 1;
+                }
+            }
+
+            // Bias gradients
+            for out_f in 0..out_features {
                 if let Some(bias) = &mut self.bias {
                     bias.gradients[out_f] += delta.slice(s![b, out_f, .., ..]).sum();
                 }
