@@ -225,15 +225,13 @@ impl RawLayer for Convolutional2D {
     }
 
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
+        // Pad the input again to match the original dimensions we used for our im2col and avoid 
+        // indexing issues with col2im
+        let forward_input = pad_4d(&forward_input.view(), (0, 0, self.padding.0, self.padding.1));
         let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let (_, _, output_height, output_width) = delta.dim();
 
-        // Recreate the original forward input before convolving
-        let forward_input = pad_4d(&forward_input.view(), (0, 0, self.padding.0, self.padding.1));
-
-        let signal_height = output_height + kernel_height - 1;
-        let signal_width = output_width + kernel_width - 1;
 
         // The dimensions for our im2col matrices
         let k = in_features * kernel_height * kernel_width;
@@ -241,19 +239,18 @@ impl RawLayer for Convolutional2D {
 
         // Transform the kernels into a single matrix of dimensions (out_features, k)
         // to prepare for an im2col matrix multiplication
-        let mut kernels = self.kernels.values.clone();
-        kernels.invert_axis(Axis(2));
-        kernels.invert_axis(Axis(3));
-        kernels.swap_axes(0, 1);
-        let kernel_matrix = kernels.to_shape((in_features, in_features * kernel_height * kernel_width)).unwrap();
+        let mut kernel_matrix = Array2::zeros((out_features, k));
+        for out_f in 0..out_features {
+            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
+                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
+            );
+        }
 
-        // Must use the padded shape of the input
         let mut error_signal = Array4::zeros((batch_size, in_features, input_height, input_width));
-        let mut kernel_grads = Array2::zeros((out_features, in_features * kernel_height * kernel_width));
 
         // Perform an im2col matrix multiplication on each input in the batch
         for b in 0..batch_size {
-            // #2: Flatten image matrix
+            // #2: Flatten image matrix (X_col)
             let mut input_matrix = Array2::zeros((k, p));
             let mut patch_idx = 0;
             for out_y in 0..output_height {
@@ -273,20 +270,22 @@ impl RawLayer for Convolutional2D {
                 }
             }
 
-            // #3: Reshape delta into matrix
-            let delta_matrix = delta
-                .slice(s![b, .., .., ..])
+            // #3: Reshape delta into matrix (dout)
+            let delta_slice = delta
+                .slice(s![b, .., .., ..]);
+            let delta_matrix = delta_slice
                 .to_shape((out_features, p))
                 .unwrap();
 
-            // println!("{:#?}", input_matrix);
-            // println!("{:#?}", delta_matrix);
+            // #4: Error signal
+            let error_signal_matrix = kernel_matrix.t().dot(&delta_matrix);
 
-            // #4: Kernel grads
-            kernel_grads.scaled_add(1., &delta_matrix.dot(&input_matrix.t()));
-
-            // #5: Error signal
-            let error_signal_matrix = kernel_matrix.dot(&delta_matrix);
+            // #5: Kernel grads
+            let kernel_grads_matrix = delta_matrix.dot(&input_matrix.t());
+            let kernel_grads_matrix = kernel_grads_matrix
+                .to_shape((out_features, in_features, kernel_height, kernel_width))
+                .unwrap();
+            self.kernels.gradients.scaled_add(1., &kernel_grads_matrix);
 
             // col2im
             let mut patch_idx = 0;
@@ -296,8 +295,8 @@ impl RawLayer for Convolutional2D {
                     for c in 0..in_features {
                         for ky in 0..kernel_height {
                             for kx in 0..kernel_width {
-                                let iy = out_y + ky;
-                                let ix = out_x + kx;
+                                let iy = out_y * self.stride.0 + ky;
+                                let ix = out_x * self.stride.1 + kx;
                                 error_signal[[b, c, iy, ix]] += error_signal_matrix[[i, patch_idx]];
                                 i += 1;
                             }
@@ -315,27 +314,16 @@ impl RawLayer for Convolutional2D {
             }
         }
 
-        self.kernels.gradients.scaled_add(1., 
-            &kernel_grads
-            .into_shape_with_order((out_features, in_features, kernel_height, kernel_width))
-            .unwrap()
-        );
-
-        error_signal
-
-        // // We need to crop the error signal to account for the padding added during the forward pass.
-        // // In the case padding was added there will be extra error values mapping to those positions,
-        // // however they are not important for calculating the previous layer's error since they were
-        // // added to the data by this layer during the forward pass
-        // crop_4d(
-        //     &error_signal.view(),
-        //     (
-        //         0,
-        //         0,
-        //         signal_height - input_height,
-        //         signal_width - input_width,
-        //     ),
-        // )
+        // We need to crop the error signal to account for the padding added during the forward pass
+        crop_4d(
+            &error_signal.view(),
+            (
+                0,
+                0,
+                self.padding.0 * 2,
+                self.padding.1 * 2,
+            ),
+        )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
