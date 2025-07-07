@@ -194,7 +194,11 @@ impl RawLayer for Convolutional2D {
         if let Some(b) = &self.bias {
             output += &b
                 .values
-                .broadcast((batch_size, out_features, output_height, output_width))
+                .view()
+                .insert_axis(Axis(0))
+                .insert_axis(Axis(2))
+                .insert_axis(Axis(2))
+                .broadcast(output.dim())
                 .unwrap();
         }
         output
@@ -261,6 +265,8 @@ impl RawLayer for Convolutional2D {
 #[cfg(test)]
 #[rustfmt::skip]
 mod tests {
+    use core::panic;
+
     use super::*;
 
     #[test]
@@ -444,6 +450,8 @@ mod tests {
             1.,
         ]).unwrap();
         assert_eq!(conv.bias.unwrap().gradients, target_b_grads);
+
+        panic!();
     }
 
     #[test]
