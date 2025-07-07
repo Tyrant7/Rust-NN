@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn col2im_no_overlap() {
+    fn col2im_basic() {
         let mut i = 0;
         let input_cols = Array2::<f32>::from_shape_fn((8, 2), |_| {
             i += 1;
@@ -351,17 +351,7 @@ mod tests {
         assert_eq!(target, input_img);
     }
 
-    #[test]
-    fn col2im_reverse_im2col() {
-        let mut i = 0;
-        let input = Array4::<f32>::from_shape_fn((2, 2, 2, 2), |_| {
-            i += 1;
-            i as f32
-        });      
-        let kernel_size = (2, 2);
-        let stride = (1, 1);
-        let padding = (0, 0);
-        
+    fn test_im2col_reversibility(input: Array4<f32>, kernel_size: (usize, usize), stride: (usize, usize), padding: (usize, usize)) {        
         let cols = im2col(&input, kernel_size, stride, padding);
         let recon = col2im(&cols, input.dim(), kernel_size, stride, padding);
         
@@ -375,5 +365,65 @@ mod tests {
         for (&original, &recon) in input_reconstructed.iter().zip(input.iter()) {
             assert_eq!(original, recon);
         }
+    }
+
+    #[test]
+    fn col2im_reverse_im2col_basic() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 2, 2, 2), |_| {
+            i += 1;
+            i as f32
+        }); 
+        test_im2col_reversibility(
+            input, 
+            (2, 2), 
+            (1, 1),
+            (0, 0),
+        );
+    }
+
+    #[test]
+    fn col2im_reverse_im2col_padding() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 2, 2, 2), |_| {
+            i += 1;
+            i as f32
+        });      
+        test_im2col_reversibility(
+            input, 
+            (2, 2), 
+            (1, 1),
+            (1, 1),
+        );
+    }
+
+    #[test]
+    fn col2im_reverse_im2col_stride() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 2, 4, 4), |_| {
+            i += 1;
+            i as f32
+        });      
+        test_im2col_reversibility(
+            input, 
+            (2, 2), 
+            (2, 2),
+            (0, 0),
+        );
+    }
+
+    #[test]
+    fn col2im_reverse_im2col_stride_and_padding() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 2, 4, 4), |_| {
+            i += 1;
+            i as f32
+        }); 
+        test_im2col_reversibility(
+            input, 
+            (2, 2), 
+            (2, 2),
+            (1, 1),
+        );
     }
 }
