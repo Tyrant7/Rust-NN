@@ -426,4 +426,19 @@ mod tests {
             (1, 1),
         );
     }
+
+    #[test]
+    fn col2im_reverse_im2col_many_channels() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 4, 3, 3), |_| {
+            i += 1;
+            i as f32
+        }); 
+        test_im2col_reversibility(
+            input, 
+            (2, 2), 
+            (1, 1),
+            (1, 1),
+        );
+    }
 }
