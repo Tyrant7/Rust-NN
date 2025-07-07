@@ -157,7 +157,6 @@ impl RawLayer for Convolutional2D {
     // Expected input shape: (batch_size, features, height, width)
     fn forward(&mut self, input: &Array4<f32>, train: bool) -> Array4<f32> {
         let (batch_size, in_features, height, width) = input.dim();
-
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
@@ -202,9 +201,8 @@ impl RawLayer for Convolutional2D {
     }
 
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
-        let (batch_size, in_features, input_height, input_width) = forward_input.dim();
-        let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
-        let (_, _, output_height, output_width) = delta.dim();
+        let (out_features, in_features, kernel_height, kernel_width) = self.kernels.values.dim();
+        let (batch_size, _, output_height, output_width) = delta.dim();
 
         // Get our kernel and input matrices constructed from the forward pass
         let (kernel_matrix, input_matrix) = self
