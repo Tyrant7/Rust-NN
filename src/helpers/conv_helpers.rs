@@ -352,24 +352,28 @@ mod tests {
     }
 
     #[test]
-    fn col2im_with_overlap() {
+    fn col2im_reverse_im2col() {
         let mut i = 0;
-        let input_cols = Array2::<f32>::from_shape_fn((9, 4), |_| {
+        let input = Array4::<f32>::from_shape_fn((2, 2, 2, 2), |_| {
             i += 1;
             i as f32
-        });
-        let input_img = col2im(&input_cols, (1, 1, 3, 3), (2, 2), (1, 1), (0, 0));
-
-        println!("{:#?}", input_cols);
-        println!("{:#?}", input_img);
-        panic!();
-
-        let target = Array4::<f32>::from_shape_vec((1, 1, 3, 3), vec![
-            
-
-            1., 3., 
-            5., 7.,
-        ]).unwrap();
-        assert_eq!(target, input_img);
+        });      
+        let kernel_size = (2, 2);
+        let stride = (1, 1);
+        let padding = (0, 0);
+        
+        let cols = im2col(&input, kernel_size, stride, padding);
+        let recon = col2im(&cols, input.dim(), kernel_size, stride, padding);
+        
+        // Compute normalization map to track overlaps
+        let ones = Array4::<f32>::ones(input.dim());
+        let cols = im2col(&ones, kernel_size, stride, padding);
+        let normalization = col2im(&cols, input.dim(), kernel_size, stride, padding);
+        
+        let input_reconstructed = &recon / &normalization;
+        
+        for (&original, &recon) in input_reconstructed.iter().zip(input.iter()) {
+            assert_eq!(original, recon);
+        }
     }
 }
