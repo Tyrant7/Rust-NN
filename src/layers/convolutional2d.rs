@@ -234,7 +234,7 @@ impl RawLayer for Convolutional2D {
             1.,
             &dout
                 .dot(&input_matrix.t())
-                .into_shape_with_order((out_features, in_features, input_height, input_width))
+                .into_shape_with_order((out_features, in_features, kernel_height, kernel_width))
                 .expect("Failed to reshape kernel gradients"),
         );
 
