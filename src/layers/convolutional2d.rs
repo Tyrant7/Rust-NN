@@ -232,6 +232,8 @@ impl RawLayer for Convolutional2D {
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let (_, _, output_height, output_width) = delta.dim();
 
+        // TODO: Tbh scrap the whole method and retry this
+        // Do the algorithm by hand first to make sure I actually fully understand it
 
         // The dimensions for our im2col matrices
         let k = in_features * kernel_height * kernel_width;
@@ -277,11 +279,18 @@ impl RawLayer for Convolutional2D {
                 .to_shape((out_features, p))
                 .unwrap();
 
+            println!("d: {:#?}", delta_matrix);
+
             // #4: Error signal
             let error_signal_matrix = kernel_matrix.t().dot(&delta_matrix);
 
+            println!("E: \n{:#?}", error_signal_matrix);
+
             // #5: Kernel grads
             let kernel_grads_matrix = delta_matrix.dot(&input_matrix.t());
+
+            println!("G:\n{:#?}", kernel_grads_matrix);
+
             let kernel_grads_matrix = kernel_grads_matrix
                 .to_shape((out_features, in_features, kernel_height, kernel_width))
                 .unwrap();
@@ -306,6 +315,11 @@ impl RawLayer for Convolutional2D {
                 }
             }
 
+            println!("Ex: \n{:#?}", error_signal);
+
+            // 6 x 8
+            // 1 x 2 x 3 x 4
+
             // Bias gradients
             for out_f in 0..out_features {
                 if let Some(bias) = &mut self.bias {
@@ -313,17 +327,7 @@ impl RawLayer for Convolutional2D {
                 }
             }
         }
-
-        // We need to crop the error signal to account for the padding added during the forward pass
-        crop_4d(
-            &error_signal.view(),
-            (
-                0,
-                0,
-                self.padding.0 * 2,
-                self.padding.1 * 2,
-            ),
-        )
+        error_signal
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {

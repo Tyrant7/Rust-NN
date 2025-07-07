@@ -216,3 +216,73 @@ pub fn crop_4d(input: &ArrayView4<f32>, crop: (usize, usize, usize, usize)) -> A
         ])
         .to_owned()
 }
+
+// Pairs given in (y, x)
+pub fn im2col(input: &Array4<f32>, kernel_size: (usize, usize), stride: (usize, usize), padding: (usize, usize)) -> Array2<f32> {
+    let (batch_size, channels, height, width) = input.dim();
+
+    let output_height = (height + 2 * padding.0 - kernel_size.0) / stride.0 + 1;
+    let output_width = (width + 2 * padding.1 - kernel_size.1) / stride.1 + 1;
+
+    let col_dim = channels * kernel_size.0 * kernel_size.1;
+    let num_cols = batch_size * output_height * output_width;
+    let mut cols = Array2::<f32>::zeros((col_dim, num_cols));
+
+    for b in 0..batch_size {
+        for c in 0..channels {
+            for kh in 0.. kernel_size.0 {
+                for kw in 0..kernel_size.1 {
+                    for oh in 0..output_height {
+                        for ow in 0..output_width {
+                            let ih = oh * stride.0 + kh;
+                            let iw = ow * stride.1 + kw;
+                            let padded_h = ih as isize - padding.0 as isize;
+                            let padded_w = iw as isize - padding.1 as isize;
+                            let val = if padded_h >= 0 && padded_h < height as isize
+                                && padded_w >= 0 && padded_w < width as isize {
+                                input[[b, c, padded_h as usize, padded_w as usize]]
+                            } else {
+                                0.
+                            };
+                            let col_idx = b * output_height * output_width + oh * output_width + ow;
+                            let row_idx = c * kernel_size.0 * kernel_size.1 + kh * kernel_size.1 + kw;
+                            cols[[row_idx, col_idx]] = val;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    cols
+}
+
+#[cfg(test)] 
+#[rustfmt::skip]
+mod tests {
+    use crate::helpers::conv_helpers::im2col;
+
+    use super::*;
+
+    #[test]
+    fn im2col_basic() {
+        let mut i = 0;
+        let input = Array4::<f32>::from_shape_fn((2, 2, 2, 2), |_| {
+            i += 1;
+            i as f32
+        });      
+        let input2col = im2col(&input, (2, 2), (1, 1), (0, 0));
+
+        let target = Array2::<f32>::from_shape_vec((8, 2), vec![
+            // col 1, col 2
+            1., 9.,
+            2., 10., 
+            3., 11.,
+            4., 12.,
+            5., 13.,
+            6., 14.,
+            7., 15.,
+            8., 16.,
+        ]).unwrap();
+        assert_eq!(target, input2col);
+    }
+}
