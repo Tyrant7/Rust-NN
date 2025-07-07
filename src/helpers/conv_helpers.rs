@@ -256,6 +256,48 @@ pub fn im2col(input: &Array4<f32>, kernel_size: (usize, usize), stride: (usize, 
     cols
 }
 
+pub fn col2im(
+    matrix: &Array2<f32>, 
+    input_shape: (usize, usize, usize, usize), 
+    kernel_size: (usize, usize), 
+    stride: (usize, usize), 
+    padding: (usize, usize)
+) -> Array4<f32> {
+    let (batch_size, channels, height, width) = input_shape;
+
+    let output_height = (height + 2 * padding.0 - kernel_size.0) / stride.0 + 1;
+    let output_width = (width + 2 * padding.1 - kernel_size.1) / stride.1 + 1;
+
+    let col_dim = channels * kernel_size.0 * kernel_size.1;
+    let num_cols = batch_size * output_height * output_width;
+    let mut img = Array4::<f32>::zeros(input_shape);
+
+    for b in 0..batch_size {
+        for c in 0..channels {
+            for kh in 0.. kernel_size.0 {
+                for kw in 0..kernel_size.1 {
+                    for oh in 0..output_height {
+                        for ow in 0..output_width {                            
+                            let ih = oh * stride.0 + kh;
+                            let iw = ow * stride.1 + kw;
+                            let padded_h = ih as isize - padding.0 as isize;
+                            let padded_w = iw as isize - padding.1 as isize;
+                            if padded_h >= 0 && padded_h < height as isize
+                            && padded_w >= 0 && padded_w < width as isize {
+                                let col_idx = b * output_height * output_width + oh * output_width + ow;
+                                let row_idx = c * kernel_size.0 * kernel_size.1 + kh * kernel_size.1 + kw;
+                                let val = matrix[[row_idx, col_idx]];
+                                img[[b, c, padded_h as usize, padded_w as usize]] = val;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    img
+}
+
 #[cfg(test)] 
 #[rustfmt::skip]
 mod tests {

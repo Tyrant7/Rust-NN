@@ -1,12 +1,16 @@
 use std::sync::Mutex;
 
 use ndarray::{
-    s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3, Ix4,
+    concatenate, s, Array1, Array2, Array3, Array4, ArrayView1, ArrayView2, Axis, Ix1, Ix2, Ix3,
+    Ix4,
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{conv_helpers::{convolve2d, crop_4d, im2col, pad_2d, pad_4d}, initialize_weights::{kaiming_normal, SeedMode}};
+use crate::helpers::{
+    conv_helpers::{col2im, convolve2d, crop_4d, im2col, pad_2d, pad_4d},
+    initialize_weights::{kaiming_normal, SeedMode},
+};
 
 use super::{LearnableParameter, ParameterGroup, RawLayer};
 
@@ -46,6 +50,9 @@ pub struct Convolutional2D {
 
     stride: (usize, usize),
     padding: (usize, usize),
+
+    #[serde(skip)]
+    cache: Option<(Array2<f32>, Array2<f32>)>,
 }
 
 impl Convolutional2D {
@@ -138,6 +145,7 @@ impl Convolutional2D {
             bias,
             stride,
             padding,
+            cache: None,
         }
     }
 }
@@ -147,39 +155,46 @@ impl RawLayer for Convolutional2D {
     type Output = Ix4;
 
     // Expected input shape: (batch_size, features, height, width)
-    fn forward(&mut self, input: &Array4<f32>, _train: bool) -> Array4<f32> {
+    fn forward(&mut self, input: &Array4<f32>, train: bool) -> Array4<f32> {
         let (batch_size, in_features, height, width) = input.dim();
 
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-            
-        // The width of our im2col matrices
-        let k = in_features * kernel_height * kernel_width;
 
         // Transform the kernels into a single matrix of dimensions (out_features, k)
         // to prepare for a matrix multiplication
-        let kernel_matrix = self.kernels.values
-            .view()
+        let k = in_features * kernel_height * kernel_width;
+        let kernel_matrix = self
+            .kernels
+            .values
+            .clone()
             .into_shape_with_order((out_features, k))
             .expect("Kernel reshape failed");
 
         // We'll use im2col to do this for our input
         let input_matrix = im2col(
-            input, 
-            (kernel_height, kernel_width), 
-            self.stride, 
-            self.padding
+            input,
+            (kernel_height, kernel_width),
+            self.stride,
+            self.padding,
         );
 
-        // Matrix multiply
-        let mut output = kernel_matrix.dot(&input_matrix)
+        // Matrix multiply to get output
+        let mut output = kernel_matrix
+            .dot(&input_matrix)
             .into_shape_clone((batch_size, out_features, output_height, output_width))
             .expect("Error when reshaping output");
 
+        // Update the cache for our backward pass
+        if train {
+            self.cache = Some((kernel_matrix, input_matrix));
+        }
+
         // Apply bias to the second dimension (features)
         if let Some(b) = &self.bias {
-            output += &b.values
+            output += &b
+                .values
                 .broadcast((batch_size, out_features, output_height, output_width))
                 .unwrap();
         }
@@ -187,109 +202,52 @@ impl RawLayer for Convolutional2D {
     }
 
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
-        // Pad the input again to match the original dimensions we used for our im2col and avoid 
-        // indexing issues with col2im
-        let forward_input = pad_4d(&forward_input.view(), (0, 0, self.padding.0, self.padding.1));
         let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
-        let (_, _, output_height, output_width) = delta.dim();
 
-        // TODO: Tbh scrap the whole method and retry this
-        // Do the algorithm by hand first to make sure I actually fully understand it
+        // Get our kernel and input matrices constructed from the forward pass
+        let (kernel_matrix, input_matrix) = self
+            .cache
+            .clone()
+            .expect("Backward called before forward or outside of train mode");
 
-        // The dimensions for our im2col matrices
-        let k = in_features * kernel_height * kernel_width;
-        let p = output_height * output_width;
-
-        // Transform the kernels into a single matrix of dimensions (out_features, k)
-        // to prepare for an im2col matrix multiplication
-        let mut kernel_matrix = Array2::zeros((out_features, k));
-        for out_f in 0..out_features {
-            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
-                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
-            );
+        // Calculate bias grads
+        if let Some(b) = &mut self.bias {
+            b.gradients += &delta
+                .sum_axis(Axis(0)) // Sum over batch
+                .sum_axis(Axis(1)) // Channel is now axis 0, so Axis 1 is height
+                .sum_axis(Axis(1)); // Axis 1 is now width
         }
 
-        let mut error_signal = Array4::zeros((batch_size, in_features, input_height, input_width));
+        // Reshape delta
+        let dout = delta
+            .to_shape((batch_size * in_features, input_height * input_width))
+            .expect("Error reshaping delta");
+        let dout = dout
+            .axis_chunks_iter(Axis(0), in_features)
+            .collect::<Vec<_>>();
+        let dout = concatenate(Axis(1), &dout).expect("Error concatenated delta into matrix");
 
-        // Perform an im2col matrix multiplication on each input in the batch
-        for b in 0..batch_size {
-            // #2: Flatten image matrix (X_col)
-            let mut input_matrix = Array2::zeros((k, p));
-            let mut patch_idx = 0;
-            for out_y in 0..output_height {
-                for out_x in 0..output_width {
-                    let mut i = 0;
-                    for c in 0..in_features {
-                        for ky in 0..kernel_height {
-                            for kx in 0..kernel_width {
-                                let iy = out_y * self.stride.0 + ky;
-                                let ix = out_x * self.stride.1 + kx;
-                                input_matrix[[i, patch_idx]] = forward_input[[b, c, iy, ix]];
-                                i += 1;
-                            }
-                        }
-                    }
-                    patch_idx += 1;
-                }
-            }
+        // Matrix multiplication to get kernel gradients
+        self.kernels.gradients.scaled_add(
+            1.,
+            &dout
+                .dot(&input_matrix.t())
+                .into_shape_with_order((out_features, in_features, input_height, input_width))
+                .expect("Failed to reshape kernel gradients"),
+        );
 
-            // #3: Reshape delta into matrix (dout)
-            let delta_slice = delta
-                .slice(s![b, .., .., ..]);
-            let delta_matrix = delta_slice
-                .to_shape((out_features, p))
-                .unwrap();
+        // Matrix multiplication to get new error signal matrix
+        let error_matrix = kernel_matrix.t().dot(&dout);
 
-            println!("d: {:#?}", delta_matrix);
-
-            // #4: Error signal
-            let error_signal_matrix = kernel_matrix.t().dot(&delta_matrix);
-
-            println!("E: \n{:#?}", error_signal_matrix);
-
-            // #5: Kernel grads
-            let kernel_grads_matrix = delta_matrix.dot(&input_matrix.t());
-
-            println!("G:\n{:#?}", kernel_grads_matrix);
-
-            let kernel_grads_matrix = kernel_grads_matrix
-                .to_shape((out_features, in_features, kernel_height, kernel_width))
-                .unwrap();
-            self.kernels.gradients.scaled_add(1., &kernel_grads_matrix);
-
-            // col2im
-            let mut patch_idx = 0;
-            for out_y in 0..output_height {
-                for out_x in 0..output_width {
-                    let mut i = 0;
-                    for c in 0..in_features {
-                        for ky in 0..kernel_height {
-                            for kx in 0..kernel_width {
-                                let iy = out_y * self.stride.0 + ky;
-                                let ix = out_x * self.stride.1 + kx;
-                                error_signal[[b, c, iy, ix]] += error_signal_matrix[[i, patch_idx]];
-                                i += 1;
-                            }
-                        }
-                    }
-                    patch_idx += 1;
-                }
-            }
-
-            println!("Ex: \n{:#?}", error_signal);
-
-            // 6 x 8
-            // 1 x 2 x 3 x 4
-
-            // Bias gradients
-            for out_f in 0..out_features {
-                if let Some(bias) = &mut self.bias {
-                    bias.gradients[out_f] += delta.slice(s![b, out_f, .., ..]).sum();
-                }
-            }
-        }
-        error_signal
+        // Reshape back to image with col2im
+        col2im(
+            &error_matrix,
+            forward_input.dim(),
+            (kernel_height, kernel_width),
+            self.stride,
+            self.padding,
+        )
     }
 
     fn get_learnable_parameters(&mut self) -> Vec<LearnableParameter> {
@@ -450,7 +408,7 @@ mod tests {
             6., 8., 10., 
             12.,14.,16.,
         ]).unwrap();
-        conv.forward(&input, false);
+        conv.forward(&input, true);
 
         let error = Array4::<f32>::from_shape_vec((1, 1, 2, 2), vec![
             // Feature 1
@@ -501,7 +459,7 @@ mod tests {
             0., 1., 
             2., 3., 
         ]).unwrap();
-        conv.forward(&input, false);
+        conv.forward(&input, true);
 
         let error = Array4::<f32>::from_shape_vec((1, 1, 3, 3), vec![
             1., 2., 1.,
@@ -549,7 +507,7 @@ mod tests {
             8., 10.,12.,14.,
             16.,18.,20.,22.,
         ]).unwrap();
-        conv.forward(&input, false);
+        conv.forward(&input, true);
 
         let error = Array4::<f32>::from_shape_vec((1, 1, 2, 3), vec![
             // Feature 1
