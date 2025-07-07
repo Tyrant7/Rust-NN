@@ -160,7 +160,7 @@ impl RawLayer for Convolutional2D {
         // Transform the kernels into a single matrix of dimensions (out_features, k)
         // to prepare for a matrix multiplication
         let kernel_matrix = self.kernels.values
-            .clone()
+            .view()
             .into_shape_with_order((out_features, k))
             .expect("Kernel reshape failed");
 
