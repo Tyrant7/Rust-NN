@@ -284,7 +284,7 @@ pub fn col2im(
                                 let col_idx = b * output_height * output_width + oh * output_width + ow;
                                 let row_idx = c * kernel_size.0 * kernel_size.1 + kh * kernel_size.1 + kw;
                                 let val = matrix[[row_idx, col_idx]];
-                                img[[b, c, padded_h as usize, padded_w as usize]] = val;
+                                img[[b, c, padded_h as usize, padded_w as usize]] += val;
                             }
                         }
                     }
@@ -323,5 +323,53 @@ mod tests {
             8., 16.,
         ]).unwrap();
         assert_eq!(target, input2col);
+    }
+
+    #[test]
+    fn col2im_no_overlap() {
+        let mut i = 0;
+        let input_cols = Array2::<f32>::from_shape_fn((8, 2), |_| {
+            i += 1;
+            i as f32
+        });
+        let input_img = col2im(&input_cols, (2, 2, 2, 2), (2, 2), (1, 1), (0, 0));
+
+        let target = Array4::<f32>::from_shape_vec((2, 2, 2, 2), vec![
+            // sample 0, channel 0
+            1., 3., 
+            5., 7.,
+            // sample 0, channel 1
+            9., 11.,
+            13.,15.,
+            // sample 1, channel 0
+            2., 4., 
+            6., 8.,
+            // sample 1, channel 1
+            10.,12.,
+            14.,16.,
+        ]).unwrap();
+        assert_eq!(target, input_img);
+    }
+
+    #[test]
+    fn col2im_with_overlap() {
+        let mut i = 0;
+        let input_cols = Array2::<f32>::from_shape_fn((9, 4), |_| {
+            i += 1;
+            i as f32
+        });
+        let input_img = col2im(&input_cols, (1, 1, 3, 3), (2, 2), (1, 1), (0, 0));
+
+        println!("{:#?}", input_cols);
+        println!("{:#?}", input_img);
+        panic!();
+
+        let target = Array4::<f32>::from_shape_vec((1, 1, 3, 3), vec![
+            
+
+            1., 3., 
+            5., 7.,
+        ]).unwrap();
+        assert_eq!(target, input_img);
     }
 }
