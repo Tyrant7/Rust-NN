@@ -267,9 +267,6 @@ pub fn col2im(
 
     let output_height = (height + 2 * padding.0 - kernel_size.0) / stride.0 + 1;
     let output_width = (width + 2 * padding.1 - kernel_size.1) / stride.1 + 1;
-
-    let col_dim = channels * kernel_size.0 * kernel_size.1;
-    let num_cols = batch_size * output_height * output_width;
     let mut img = Array4::<f32>::zeros(input_shape);
 
     for b in 0..batch_size {

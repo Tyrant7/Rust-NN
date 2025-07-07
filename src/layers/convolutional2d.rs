@@ -204,6 +204,7 @@ impl RawLayer for Convolutional2D {
     fn backward(&mut self, delta: &Array4<f32>, forward_input: &Array4<f32>) -> Array4<f32> {
         let (batch_size, in_features, input_height, input_width) = forward_input.dim();
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
+        let (_, _, output_height, output_width) = delta.dim();
 
         // Get our kernel and input matrices constructed from the forward pass
         let (kernel_matrix, input_matrix) = self
@@ -221,7 +222,7 @@ impl RawLayer for Convolutional2D {
 
         // Reshape delta
         let dout = delta
-            .to_shape((batch_size * in_features, input_height * input_width))
+            .to_shape((batch_size * out_features, output_height * output_width))
             .expect("Error reshaping delta");
         let dout = dout
             .axis_chunks_iter(Axis(0), in_features)
