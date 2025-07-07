@@ -6,10 +6,7 @@ use ndarray::{
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    helpers::conv_helpers::{convolve2d, crop_4d, pad_2d, pad_4d},
-    helpers::initialize_weights::{kaiming_normal, SeedMode},
-};
+use crate::helpers::{conv_helpers::{convolve2d, crop_4d, im2col, pad_2d, pad_4d}, initialize_weights::{kaiming_normal, SeedMode}};
 
 use super::{LearnableParameter, ParameterGroup, RawLayer};
 
@@ -153,22 +150,15 @@ impl RawLayer for Convolutional2D {
     fn forward(&mut self, input: &Array4<f32>, _train: bool) -> Array4<f32> {
         let (batch_size, in_features, height, width) = input.dim();
 
-        // (batch_size, in_features, height, width)
-        // We only care about padding the height and width dimensions
-        let input = pad_4d(&input.view(), (0, 0, self.padding.0, self.padding.1));
-
         let (out_features, _, kernel_height, kernel_width) = self.kernels.values.dim();
         let output_width = ((width - kernel_width + (2 * self.padding.1)) / self.stride.1) + 1;
         let output_height = ((height - kernel_height + (2 * self.padding.0)) / self.stride.0) + 1;
-        let mut output =
-            Array4::<f32>::zeros((batch_size, out_features, output_height, output_width));
             
-        // The dimensions for our im2col matrices
+        // The width of our im2col matrices
         let k = in_features * kernel_height * kernel_width;
-        let p = output_height * output_width;
 
         // Transform the kernels into a single matrix of dimensions (out_features, k)
-        // to prepare for an im2col matrix multiplication
+        // to prepare for a matrix multiplication
         let mut kernel_matrix = Array2::zeros((out_features, k));
         for out_f in 0..out_features {
             kernel_matrix.slice_mut(s![out_f, ..]).assign( 
@@ -176,49 +166,23 @@ impl RawLayer for Convolutional2D {
             );
         }
 
-        // Perform an im2col matrix multiplication on each input in the batch
-        let mut input_matrix = Array2::zeros((k, p));
-        for b in 0..batch_size {
-            let mut patch_idx = 0;
+        // We'll use im2col to do this for our input
+        let input_matrix = im2col(
+            input, 
+            (kernel_height, kernel_width), 
+            self.stride, 
+            self.padding
+        );
 
-            // We'll do the same thing for the input, but with dimensions (k, p)
-            // where p represents each location where the kernel can overlap the image on all dimensions
-            for out_y in 0..output_height {
-                for out_x in 0..output_width {
-                    let mut i = 0;
-                    for c in 0..in_features {
-                        for ky in 0..kernel_height {
-                            for kx in 0..kernel_width {
-                                let iy = out_y * self.stride.0 + ky;
-                                let ix = out_x * self.stride.1 + kx;
-                                input_matrix[[i, patch_idx]] = input[[b, c, iy, ix]];
-                                i += 1;
-                            }
-                        }
-                    }
-                    patch_idx += 1;
-                }
-            }
-
-            // Matrix multiply
-            let output_matrix = kernel_matrix.dot(&input_matrix);
-
-            // Remake our correct output shape and store it in the output buffer
-            let output_reshaped = output_matrix
-                .into_shape_with_order((out_features, output_height, output_width))
-                .unwrap();
-            output.slice_mut(s![b, .., .., ..]).assign(&output_reshaped);
-        }
+        // Matrix multiply
+        let mut output = kernel_matrix.dot(&input_matrix)
+            .into_shape_clone((batch_size, out_features, output_height, output_width))
+            .expect("Error when reshaping output");
 
         // Apply bias to the second dimension (features)
         if let Some(b) = &self.bias {
-            output += &b
-                .values
-                .view()
-                .insert_axis(Axis(0))
-                .insert_axis(Axis(2))
-                .insert_axis(Axis(2))
-                .broadcast(output.dim())
+            output += &b.values
+                .broadcast((batch_size, out_features, output_height, output_width))
                 .unwrap();
         }
         output
