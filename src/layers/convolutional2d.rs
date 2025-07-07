@@ -159,12 +159,10 @@ impl RawLayer for Convolutional2D {
 
         // Transform the kernels into a single matrix of dimensions (out_features, k)
         // to prepare for a matrix multiplication
-        let mut kernel_matrix = Array2::zeros((out_features, k));
-        for out_f in 0..out_features {
-            kernel_matrix.slice_mut(s![out_f, ..]).assign( 
-                &self.kernels.values.slice(s![out_f, .., .., ..]).flatten()
-            );
-        }
+        let kernel_matrix = self.kernels.values
+            .clone()
+            .into_shape_with_order((out_features, k))
+            .expect("Kernel reshape failed");
 
         // We'll use im2col to do this for our input
         let input_matrix = im2col(
